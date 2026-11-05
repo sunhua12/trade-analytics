@@ -9,6 +9,13 @@ BASE_URL = "https://comtradeapi.un.org/public/v1/preview/C/M/HS"
 MAX_RETRIES = 3
 TIMEOUT = 30
 
+PARAMS = {
+    "period": "202401",
+    "reporterCode": "842",
+    "flowCode": "M",
+    "cmdCode": "854231",
+    "partnerCode": "0",
+}
 
 def fetch_trade_data(base_params: dict) -> dict:
     """分別取得 World 與 Partner 資料。"""
