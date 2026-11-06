@@ -1,9 +1,9 @@
 import json
 import time
 from decimal import Decimal
-
 import requests
 from requests import Response
+from trade_analytics.query import ComtradeQuery, QueryType
 
 BASE_URL = "https://comtradeapi.un.org/public/v1/preview/C/M/HS"
 MAX_RETRIES = 3
@@ -17,23 +17,24 @@ PARAMS = {
     "partnerCode": "0",
 }
 
+
 def fetch_trade_data(base_params: dict) -> dict:
-    """分別取得 World 與 Partner 資料。"""
-    common_params = {**base_params, "partner2Code": 0, "customsCode": "C00", "motCode": 0, }
+    query_config = {
+        "period": base_params["period"],
+        "cmd_code": base_params["cmdCode"],
+        "reporter_code": base_params["reporterCode"],
+    }
 
     # World：美國從全球進口某項商品的總金額
     # partnerCode=0 代表 World（全球總額）
-    world_params = {**common_params, "partnerCode": 0, }
+    world_query = ComtradeQuery(**query_config, query_type=QueryType.WORLD_TOTAL)
+    world_records = fetch_records(world_query.to_params())
 
     # Partner：美國分別從哪些國家進口該商品，以及各國的進口金額
     # 因為不一定有各國的進口資料，所以不直接用partner加總算出總額的方式
     # API 沒給 partnerCode 就會回傳全部 partner 資料
-    partner_params = {key: value for key, value in common_params.items() if key != "partnerCode"}
-
-    world_records = fetch_records(world_params)
-    partner_records = fetch_records(partner_params)
-
-    # 排除 World，避免重複納入 Partner 明細
+    partner_query = ComtradeQuery(**query_config, query_type=QueryType.PARTNER_DETAIL)
+    partner_records = fetch_records(partner_query.to_params())
     partner_records = [record for record in partner_records if record.get("partnerCode") != 0]
 
     return {"world": world_records, "partners": partner_records, }
@@ -95,7 +96,6 @@ def parse_payload(response_text: str) -> dict:
 
 def validate_records(records: object) -> list[dict]:
     """驗證交易紀錄結構"""
-
     if not isinstance(records, list):
         raise ValueError("API 回應缺少 data 陣列")
 

@@ -1,70 +1,38 @@
+
 import json
+import os
 from decimal import Decimal
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 import requests
 
-from trade_analytics.extract import (
-    fetch_trade_data,
-    parse_payload,
-    validate_records,
-    request_with_retry
-)
+from trade_analytics.extract import fetch_trade_data, fetch_records, parse_payload, validate_records, request_with_retry
 
-# 共用測試資料
+
 PARAMS = {
     "period": "202401",
     "reporterCode": "842",
     "flowCode": "M",
     "cmdCode": "854231",
-    "partnerCode": "0",
+    "partner2Code": 0,
+    "customsCode": "C00",
+    "motCode": 0,
+    "partnerCode": 0,
 }
-
-
-def test_api():
-    payload = fetch_trade_data(PARAMS)
-
-    # 觀察 JSON 外層
-    print("外層資料型別：", type(payload).__name__)
-    print("外層欄位：", list(payload.keys()))
-
-    if payload.get("error"):
-        raise RuntimeError(payload["error"])
-
-    rows = payload.get("data", [])
-    print("完整資料：", rows)
-
-    print("\n實際回傳筆數：", len(rows))
-
-    # 查看一筆完整紀錄
-    if rows:
-        print("\n第一筆資料：")
-        print(json.dumps(rows[0], indent=2, ensure_ascii=False))
-
-        print("\n第一筆的欄位、型別與值：")
-        for field, value in rows[0].items():
-            print(f"{field:30} {type(value).__name__:12} {value!r}")
-
 
 def make_response(status_code=200, data=None):
     """建立假的 HTTP Response。"""
-
     response = requests.Response()
     response.status_code = status_code
-    response._content = json.dumps(
-        {"data": data if data is not None else []}
-    ).encode("utf-8")
-
+    response._content = json.dumps({"data": data if data is not None else []}).encode("utf-8")
     return response
 
 
 # 1. JSON 解析成功
 def test_parse_payload():
     text = '{"data": [{"primaryValue": 123.45}]}'
-
     result = parse_payload(text)
-
     assert result["data"][0]["primaryValue"] == Decimal("123.45")
 
 
@@ -77,9 +45,7 @@ def test_parse_payload_invalid():
 # 3. Records 正常
 def test_validate_records():
     records = [{"reporterCode": 842}]
-
     result = validate_records(records)
-
     assert result == records
 
 
@@ -89,32 +55,34 @@ def test_validate_records_invalid():
         validate_records({"reporterCode": 842})
 
 
-# 5. HTTP 200：成功取得資料
-def test_fetch_records_success():
-    records = [{"reporterCode": 842, "primaryValue": 100}]
+# 5. World + Partner：成功取得資料
+def test_fetch_trade_data_success():
+    world_records = [{"reporterCode": 842, "partnerCode": 0, "primaryValue": 1000}]
+    partner_records = [
+        {"reporterCode": 842, "partnerCode": 0, "primaryValue": 1000},
+        {"reporterCode": 842, "partnerCode": 156, "primaryValue": 600},
+        {"reporterCode": 842, "partnerCode": 392, "primaryValue": 400},
+    ]
 
-    with patch(
-            "trade_analytics.extract.requests.get"
-    ) as mock_get:
-        mock_get.return_value = make_response(
-            status_code=200,
-            data=records,
-        )
-
+    with patch("trade_analytics.extract.requests.get") as mock_get:
+        mock_get.side_effect = [make_response(200, world_records), make_response(200, partner_records)]
         result = fetch_trade_data(PARAMS)
 
-    assert result == records
-    mock_get.assert_called_once()
+    assert result["world"] == world_records
+    assert result["partners"] == partner_records[1:]
+    assert mock_get.call_count == 2
+
+    world_params = mock_get.call_args_list[0].kwargs["params"]
+    partner_params = mock_get.call_args_list[1].kwargs["params"]
+
+    assert world_params["partnerCode"] == 0
+    assert "partnerCode" not in partner_params
 
 
 # 6. HTTP 400：不應重試
 def test_http_400_no_retry():
-    with patch(
-            "trade_analytics.extract.requests.get"
-    ) as mock_get:
-        mock_get.return_value = make_response(
-            status_code=400
-        )
+    with patch("trade_analytics.extract.requests.get") as mock_get:
+        mock_get.return_value = make_response(400)
 
         with pytest.raises(requests.HTTPError):
             request_with_retry(PARAMS)
@@ -128,11 +96,7 @@ def test_http_429_retry():
         patch("trade_analytics.extract.requests.get") as mock_get,
         patch("trade_analytics.extract.time.sleep") as mock_sleep,
     ):
-        mock_get.side_effect = [
-            make_response(429),
-            make_response(200),
-        ]
-
+        mock_get.side_effect = [make_response(429), make_response(200)]
         result = request_with_retry(PARAMS)
 
     assert result.status_code == 200
@@ -146,11 +110,7 @@ def test_http_500_retry():
         patch("trade_analytics.extract.requests.get") as mock_get,
         patch("trade_analytics.extract.time.sleep"),
     ):
-        mock_get.side_effect = [
-            make_response(500),
-            make_response(200),
-        ]
-
+        mock_get.side_effect = [make_response(500), make_response(200)]
         result = request_with_retry(PARAMS)
 
     assert result.status_code == 200
@@ -163,11 +123,7 @@ def test_timeout_retry():
         patch("trade_analytics.extract.requests.get") as mock_get,
         patch("trade_analytics.extract.time.sleep"),
     ):
-        mock_get.side_effect = [
-            requests.Timeout("Request timed out"),
-            make_response(200),
-        ]
-
+        mock_get.side_effect = [requests.Timeout("Request timed out"), make_response(200)]
         result = request_with_retry(PARAMS)
 
     assert result.status_code == 200
