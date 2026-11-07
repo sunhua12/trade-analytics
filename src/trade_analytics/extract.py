@@ -1,3 +1,4 @@
+import logging
 import json
 from decimal import Decimal
 from typing import Any
@@ -5,6 +6,9 @@ from typing import Any
 from trade_analytics.client import ComtradeClient
 from trade_analytics.query import ComtradeQuery, QueryType
 from trade_analytics.schemas import ComtradeResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_trade_data(client: ComtradeClient, base_params: dict) -> dict[str, list[dict[str, Any]]]:
@@ -35,6 +39,7 @@ def fetch_records(client: ComtradeClient, params: dict[str, str | int]) -> list[
     payload = parse_payload(response.text)
     validated_response = ComtradeResponse.model_validate(payload)
 
+    logger.debug("API Schema 驗證通過：%d 筆", len(validated_response.data))
     return [record.model_dump(by_alias=True) for record in validated_response.data]
 
 

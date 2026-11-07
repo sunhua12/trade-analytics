@@ -1,6 +1,10 @@
+import logging
 from decimal import Decimal
 
 # 將 UN Comtrade API 的原始欄位名稱對應到標準化欄位名稱
+logger = logging.getLogger(__name__)
+
+
 FIELD_MAPPING = {
     "period": "period",
     "reporterCode": "reporter_code",
@@ -25,4 +29,5 @@ def transform_record(record: dict) -> dict:
 def transform_trade_data(trade_data: dict) -> dict:
     world_records = [transform_record(record) for record in trade_data["world"]]
     partner_records = [transform_record(record) for record in trade_data["partners"]]
+    logger.debug("欄位轉換完成：World %d 筆，Partner %d 筆", len(world_records), len(partner_records))
     return {"world": world_records, "partners": partner_records, }

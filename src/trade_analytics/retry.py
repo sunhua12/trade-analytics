@@ -1,3 +1,4 @@
+import logging
 
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -6,6 +7,9 @@ import httpx
 
 from tenacity import RetryCallState, wait_random_exponential
 from tenacity.wait import wait_base
+
+
+logger = logging.getLogger(__name__)
 
 
 def parse_retry_after(value: str | None) -> float | None:
@@ -50,4 +54,5 @@ class WaitRetryAfter(wait_base):
         if retry_after is None:
             return backoff
 
+        logger.debug("重試等待：backoff=%.2f 秒，Retry-After=%.2f 秒", backoff, retry_after)
         return max(backoff, retry_after)

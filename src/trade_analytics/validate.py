@@ -1,11 +1,17 @@
+import logging
 
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 def validate_trade_data(trade_data: dict, params: dict) -> None:
     validate_data_structure(trade_data)
     validate_world_data(params, trade_data)
     validate_partner_data(params, trade_data)
+    logger.debug("業務資料驗證通過：period=%s reporter=%s cmd=%s",
+                 params["period"], params["reporterCode"], params["cmdCode"])
 
 
 def validate_partner_data(params: dict[Any, Any], trade_data: dict[Any, Any]) -> None:
