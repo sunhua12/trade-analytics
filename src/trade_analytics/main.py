@@ -1,7 +1,9 @@
 import httpx
+import logging
 
 from trade_analytics.batch import execute_batch, plan_batch_queries
 from trade_analytics.client import ComtradeClient
+from trade_analytics.logging_config import setup_logging
 from trade_analytics.manifest import build_manifest, verify_manifest
 
 
@@ -12,12 +14,15 @@ CMD_CODES = ["854231", "854232"]
 MAX_ATTEMPTS = 3
 TIMEOUT = 30.0
 
+logger = logging.getLogger("trade_analytics.main")
+
 
 def main():
+    setup_logging()
     # 1. Batch Query Planning
     queries = plan_batch_queries(reporters=REPORTERS, periods=PERIODS, cmd_codes=CMD_CODES)
 
-    print(f"預計執行 {len(queries)} 組 Query")
+    logger.info(f"預計執行 {len(queries)} 組 Query")
 
     # 2. Batch Execution
     with httpx.Client(timeout=TIMEOUT) as http_client:
@@ -27,18 +32,14 @@ def main():
     # 3. Manifest & Checksum
     manifest = build_manifest(results)
     verify_manifest(results, manifest)
+    save_batch_artifacts(results, manifest)
 
-    # 4. 輸出執行結果
-    for result in results:
-        query = result.query
-        print(f"{query.reporter_code} / {query.period} / {query.cmd_code} / {query.query_type.value}：{len(result.records)} 筆")
-
-    print(f"成功完成 {len(results)} 組 Query")
-    print(f"Manifest Entries：{len(manifest.entries)}")
-
-    for entry in manifest.entries:
-        print(f"{entry.query['reporter_code']} / {entry.query['period']} / {entry.query['cmd_code']} / {entry.query['query_type']}：SHA-256 {entry.sha256}")
+    logger.info("成功完成 %d 組 Query，Manifest 驗證通過", len(results))
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        logger.exception("批次執行失敗")
+        raise

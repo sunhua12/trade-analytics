@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from itertools import product
 from typing import Any
@@ -5,6 +6,9 @@ from typing import Any
 from trade_analytics.client import ComtradeClient
 from trade_analytics.extract import fetch_records
 from trade_analytics.query import ComtradeQuery, QueryType
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -22,6 +26,7 @@ def plan_batch_queries(reporters: list[int], periods: list[str], cmd_codes: list
             query = ComtradeQuery(reporter_code=reporter, period=period, cmd_code=cmd_code, query_type=query_type)
             queries.append(query)
 
+    logger.debug("查詢計畫已建立：%d 組", len(queries))
     return queries
 
 
@@ -36,5 +41,8 @@ def execute_batch(client: ComtradeClient, queries: list[ComtradeQuery]) -> list[
             records = [record for record in records if record["partnerCode"] != 0]
 
         results.append(BatchResult(query=query, records=records))
+        logger.info("查詢完成：reporter=%s period=%s cmd=%s type=%s，%d 筆",
+                    query.reporter_code, query.period, query.cmd_code,
+                    query.query_type.value, len(records))
 
     return results

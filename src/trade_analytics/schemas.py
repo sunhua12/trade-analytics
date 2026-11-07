@@ -1,7 +1,11 @@
+import logging
 
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+
+logger = logging.getLogger(__name__)
 
 
 class TradeRecord(BaseModel):
@@ -24,6 +28,7 @@ class TradeRecord(BaseModel):
     @classmethod
     def validate_primary_value(cls, value: object) -> Decimal:
         if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+            logger.debug("primaryValue 型別驗證失敗：%s", type(value).__name__)
             raise ValueError("primaryValue 必須是數字，且不可為 bool")
 
         return Decimal(str(value))

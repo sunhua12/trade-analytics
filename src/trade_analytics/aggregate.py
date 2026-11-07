@@ -1,6 +1,9 @@
-from _typeshed import SupportsAdd
+import logging
 from decimal import Decimal
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 def aggregate_trade_data(trade_data: dict) -> dict:
@@ -11,6 +14,7 @@ def aggregate_trade_data(trade_data: dict) -> dict:
     partner_summary = calc_partner_summary(partner_records, world_value)
     partner_total = calc_partner_total(partner_records)
 
+    logger.info("彙總完成：period=%s，%d 個 Partner", world_record["period"], len(partner_records))
     return {
         "period": world_record["period"],
         "reporter_code": world_record["reporter_code"],

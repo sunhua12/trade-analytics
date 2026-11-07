@@ -1,7 +1,11 @@
+import logging
 from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
+
+
+logger = logging.getLogger(__name__)
 
 
 class QueryType(StrEnum):
@@ -49,4 +53,6 @@ class ComtradeQuery(BaseModel):
         if self.query_type == QueryType.WORLD_TOTAL:
             params["partnerCode"] = 0
 
+        logger.debug("查詢參數已建立：reporter=%s period=%s cmd=%s type=%s",
+                     self.reporter_code, self.period, self.cmd_code, self.query_type.value)
         return params

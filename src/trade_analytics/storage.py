@@ -1,7 +1,11 @@
+import logging
 import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+logger = logging.getLogger(__name__)
 
 
 def write_json(path: Path, data: dict) -> None:
@@ -56,4 +60,5 @@ def save_trade_data(trade_data: dict, summary: dict, output_dir: str | Path = "o
 
     write_json(manifest_path, manifest)
 
+    logger.info("資料已儲存：%s，%d 筆", destination.resolve(), len(records))
     return manifest

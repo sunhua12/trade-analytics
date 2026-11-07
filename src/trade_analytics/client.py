@@ -1,8 +1,12 @@
+import logging
 import httpx
 
-from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_random_exponential
+from tenacity import Retrying, before_sleep_log, retry_if_exception, stop_after_attempt
 from tenacity.wait import wait_base
 from trade_analytics.retry import WaitRetryAfter
+
+logger = logging.getLogger(__name__)
+
 
 BASE_URL = "https://comtradeapi.un.org/public/v1/preview/C/M/HS"
 
@@ -35,10 +39,12 @@ class ComtradeClient:
             stop=stop_after_attempt(self.max_attempts),
             wait=self.wait,
             reraise=True,
+            before_sleep=before_sleep_log(logger, logging.WARNING),
         )
         return retrying(self._request, params)
 
     def _request(self, params: dict[str, str | int]) -> httpx.Response:
         response = self.http_client.get(self.base_url, params=params)
         response.raise_for_status()
+        logger.debug("HTTP 請求完成：status=%d", response.status_code)
         return response

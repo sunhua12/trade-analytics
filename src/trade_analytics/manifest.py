@@ -1,10 +1,14 @@
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
 from trade_analytics.batch import BatchResult
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -54,6 +58,7 @@ def build_manifest(results: list[BatchResult]) -> BatchManifest:
         )
         entries.append(entry)
 
+    logger.debug("Manifest 已建立：%d entries", len(entries))
     return BatchManifest(schema_version=1, entries=entries)
 
 
@@ -83,3 +88,5 @@ def verify_manifest(results: list[BatchResult], manifest: BatchManifest) -> None
 
         data = serialize_records(result.records)
         verify_artifact(data, entry)
+
+    logger.debug("Manifest 驗證通過：%d entries", len(manifest.entries))
