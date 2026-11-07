@@ -1,36 +1,43 @@
 import httpx
 
+from trade_analytics.batch import execute_batch, plan_batch_queries
 from trade_analytics.client import ComtradeClient
-from trade_analytics.extract import fetch_trade_data
-from trade_analytics.validate import validate_trade_data
-from trade_analytics.transform import transform_trade_data
-from trade_analytics.aggregate import aggregate_trade_data
-from trade_analytics.storage import save_trade_data
+from trade_analytics.manifest import build_manifest, verify_manifest
 
 
-PARAMS = {
-    "period": "202401",
-    "reporterCode": "842",
-    "flowCode": "M",
-    "cmdCode": "854231",
-    "partnerCode": "0",
-}
+REPORTERS = [842, 156]
+PERIODS = ["202401", "202402"]
+CMD_CODES = ["854231", "854232"]
+
+MAX_ATTEMPTS = 3
+TIMEOUT = 30.0
 
 
-def main() -> None:
-    with httpx.Client(timeout=30.0) as http_client:
-        client = ComtradeClient(http_client)
-        trade_data = fetch_trade_data(client, PARAMS)
+def main():
+    # 1. Batch Query Planning
+    queries = plan_batch_queries(reporters=REPORTERS, periods=PERIODS, cmd_codes=CMD_CODES)
 
-    validate_trade_data(trade_data, PARAMS)
-    transformed_data = transform_trade_data(trade_data)
-    summary = aggregate_trade_data(transformed_data)
-    manifest = save_trade_data(transformed_data, summary)
+    print(f"預計執行 {len(queries)} 組 Query")
 
-    print("ETL completed successfully")
-    print("World value:", summary["world_value"])
-    print("Partner count:", summary["partner_count"])
-    print("Manifest:", manifest)
+    # 2. Batch Execution
+    with httpx.Client(timeout=TIMEOUT) as http_client:
+        client = ComtradeClient(http_client, max_attempts=MAX_ATTEMPTS)
+        results = execute_batch(client, queries)
+
+    # 3. Manifest & Checksum
+    manifest = build_manifest(results)
+    verify_manifest(results, manifest)
+
+    # 4. 輸出執行結果
+    for result in results:
+        query = result.query
+        print(f"{query.reporter_code} / {query.period} / {query.cmd_code} / {query.query_type.value}：{len(result.records)} 筆")
+
+    print(f"成功完成 {len(results)} 組 Query")
+    print(f"Manifest Entries：{len(manifest.entries)}")
+
+    for entry in manifest.entries:
+        print(f"{entry.query['reporter_code']} / {entry.query['period']} / {entry.query['cmd_code']} / {entry.query['query_type']}：SHA-256 {entry.sha256}")
 
 
 if __name__ == "__main__":
