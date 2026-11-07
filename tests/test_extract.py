@@ -1,13 +1,14 @@
-
 import json
-import os
 from decimal import Decimal
-from unittest.mock import patch
 
+import httpx
 import pytest
-import requests
+from pydantic import ValidationError
+from tenacity import wait_fixed
 
-from trade_analytics.extract import fetch_trade_data, fetch_records, parse_payload, validate_records, request_with_retry
+from trade_analytics.client import ComtradeClient
+from trade_analytics.extract import fetch_trade_data, fetch_records, parse_payload
+from trade_analytics.query import ComtradeQuery, QueryType
 
 
 PARAMS = {
@@ -21,18 +22,75 @@ PARAMS = {
     "partnerCode": 0,
 }
 
-def make_response(status_code=200, data=None):
+BASE_RECORD = {
+    "period": "202401",
+    "reporterCode": 842,
+    "partnerCode": 0,
+    "flowCode": "M",
+    "cmdCode": "854231",
+    "primaryValue": 1000,
+    "classificationCode": "H6",
+    "freqCode": "M",
+    "partner2Code": 0,
+    "customsCode": "C00",
+    "motCode": 0,
+    "isOriginalClassification": True,
+}
+
+def test_api():
+    with httpx.Client(timeout=30.0) as http_client:
+        client = ComtradeClient(http_client)
+        payload = fetch_trade_data(client, PARAMS)
+
+    # 觀察外層資料
+    print("\n外層資料型別：", type(payload).__name__)
+    print("外層欄位：", list(payload.keys()))
+
+    # 分別觀察 World Total 和 Partner Detail
+    for name, rows in payload.items():
+        print(f"\n========== {name.upper()} ==========")
+        print("資料型別：", type(rows).__name__)
+        print("實際回傳筆數：", len(rows))
+
+        print("\n完整資料：")
+        print(json.dumps(rows, indent=2, ensure_ascii=False, default=str))
+
+        # 查看第一筆完整紀錄
+        if rows:
+            print("\n第一筆資料：")
+            print(json.dumps(rows[0], indent=2, ensure_ascii=False, default=str))
+
+            print("\n第一筆的欄位、型別與值：")
+            for field, value in rows[0].items():
+                print(f"{field:30} {type(value).__name__:12} {value!r}")
+
+            print("\nprimaryValue 型別：", type(rows[0]["primaryValue"]).__name__)
+            assert isinstance(rows[0]["primaryValue"], Decimal)
+
+
+
+def make_record(partner_code: int, primary_value: int) -> dict:
+    """建立符合 Pydantic Schema 的交易紀錄。"""
+    return {**BASE_RECORD, "partnerCode": partner_code, "primaryValue": primary_value}
+
+
+def make_response(status_code: int = 200, data: list | None = None) -> httpx.Response:
     """建立假的 HTTP Response。"""
-    response = requests.Response()
-    response.status_code = status_code
-    response._content = json.dumps({"data": data if data is not None else []}).encode("utf-8")
-    return response
+    return httpx.Response(status_code, json={"data": data if data is not None else []})
+
+
+def make_client(handler, max_attempts: int = 3):
+    """建立使用 MockTransport 的 HTTP Client。"""
+    http_client = httpx.Client(transport=httpx.MockTransport(handler))
+    client = ComtradeClient(http_client, max_attempts=max_attempts, wait=wait_fixed(0))
+    return http_client, client
 
 
 # 1. JSON 解析成功
 def test_parse_payload():
     text = '{"data": [{"primaryValue": 123.45}]}'
     result = parse_payload(text)
+
     assert result["data"][0]["primaryValue"] == Decimal("123.45")
 
 
@@ -42,103 +100,148 @@ def test_parse_payload_invalid():
         parse_payload("[]")
 
 
-# 3. Records 正常
-def test_validate_records():
-    records = [{"reporterCode": 842}]
-    result = validate_records(records)
-    assert result == records
+# 3. Pydantic Schema 驗證成功
+def test_fetch_records_valid_schema():
+    def handler(request):
+        return make_response(200, [make_record(0, 1000)])
+
+    http_client, client = make_client(handler)
+
+    with http_client:
+        records = fetch_records(client, PARAMS)
+
+    assert len(records) == 1
+    assert records[0]["reporterCode"] == 842
+    assert records[0]["primaryValue"] == Decimal("1000")
 
 
-# 4. Records 格式錯誤
-def test_validate_records_invalid():
-    with pytest.raises(ValueError):
-        validate_records({"reporterCode": 842})
+# 4. Pydantic Schema 驗證失敗
+def test_fetch_records_invalid_schema():
+    def handler(request):
+        return make_response(200, [{"reporterCode": 842}])
+
+    http_client, client = make_client(handler)
+
+    with http_client:
+        with pytest.raises(ValidationError):
+            fetch_records(client, PARAMS)
 
 
 # 5. World + Partner：成功取得資料
 def test_fetch_trade_data_success():
-    world_records = [{"reporterCode": 842, "partnerCode": 0, "primaryValue": 1000}]
-    partner_records = [
-        {"reporterCode": 842, "partnerCode": 0, "primaryValue": 1000},
-        {"reporterCode": 842, "partnerCode": 156, "primaryValue": 600},
-        {"reporterCode": 842, "partnerCode": 392, "primaryValue": 400},
-    ]
+    world_records = [make_record(0, 1000)]
+    partner_records = [make_record(0, 1000), make_record(156, 600), make_record(392, 400)]
+    requests_seen = []
 
-    with patch("trade_analytics.extract.requests.get") as mock_get:
-        mock_get.side_effect = [make_response(200, world_records), make_response(200, partner_records)]
-        result = fetch_trade_data(PARAMS)
+    def handler(request):
+        requests_seen.append(request)
+        if request.url.params.get("partnerCode") == "0":
+            return make_response(200, world_records)
+        return make_response(200, partner_records)
 
-    assert result["world"] == world_records
-    assert result["partners"] == partner_records[1:]
-    assert mock_get.call_count == 2
+    http_client, client = make_client(handler)
 
-    world_params = mock_get.call_args_list[0].kwargs["params"]
-    partner_params = mock_get.call_args_list[1].kwargs["params"]
+    with http_client:
+        result = fetch_trade_data(client, PARAMS)
 
-    assert world_params["partnerCode"] == 0
+    assert len(requests_seen) == 2
+    assert result["world"][0]["primaryValue"] == Decimal("1000")
+    assert [record["partnerCode"] for record in result["partners"]] == [156, 392]
+
+    world_params = requests_seen[0].url.params
+    partner_params = requests_seen[1].url.params
+
+    assert world_params["partnerCode"] == "0"
     assert "partnerCode" not in partner_params
 
 
 # 6. HTTP 400：不應重試
 def test_http_400_no_retry():
-    with patch("trade_analytics.extract.requests.get") as mock_get:
-        mock_get.return_value = make_response(400)
+    attempts = 0
 
-        with pytest.raises(requests.HTTPError):
-            request_with_retry(PARAMS)
+    def handler(request):
+        nonlocal attempts
+        attempts += 1
+        return make_response(400)
 
-    assert mock_get.call_count == 1
+    http_client, client = make_client(handler)
+
+    with http_client:
+        with pytest.raises(httpx.HTTPStatusError):
+            client.get(PARAMS)
+
+    assert attempts == 1
 
 
 # 7. HTTP 429：應該重試
 def test_http_429_retry():
-    with (
-        patch("trade_analytics.extract.requests.get") as mock_get,
-        patch("trade_analytics.extract.time.sleep") as mock_sleep,
-    ):
-        mock_get.side_effect = [make_response(429), make_response(200)]
-        result = request_with_retry(PARAMS)
+    attempts = 0
 
-    assert result.status_code == 200
-    assert mock_get.call_count == 2
-    mock_sleep.assert_called_once_with(1)
+    def handler(request):
+        nonlocal attempts
+        attempts += 1
+        return make_response(429 if attempts == 1 else 200)
+
+    http_client, client = make_client(handler)
+
+    with http_client:
+        response = client.get(PARAMS)
+
+    assert response.status_code == 200
+    assert attempts == 2
 
 
 # 8. HTTP 500：應該重試
 def test_http_500_retry():
-    with (
-        patch("trade_analytics.extract.requests.get") as mock_get,
-        patch("trade_analytics.extract.time.sleep"),
-    ):
-        mock_get.side_effect = [make_response(500), make_response(200)]
-        result = request_with_retry(PARAMS)
+    attempts = 0
 
-    assert result.status_code == 200
-    assert mock_get.call_count == 2
+    def handler(request):
+        nonlocal attempts
+        attempts += 1
+        return make_response(500 if attempts == 1 else 200)
+
+    http_client, client = make_client(handler)
+
+    with http_client:
+        response = client.get(PARAMS)
+
+    assert response.status_code == 200
+    assert attempts == 2
 
 
 # 9. Timeout：應該重試
 def test_timeout_retry():
-    with (
-        patch("trade_analytics.extract.requests.get") as mock_get,
-        patch("trade_analytics.extract.time.sleep"),
-    ):
-        mock_get.side_effect = [requests.Timeout("Request timed out"), make_response(200)]
-        result = request_with_retry(PARAMS)
+    attempts = 0
 
-    assert result.status_code == 200
-    assert mock_get.call_count == 2
+    def handler(request):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise httpx.ReadTimeout("Request timed out", request=request)
+        return make_response(200)
+
+    http_client, client = make_client(handler)
+
+    with http_client:
+        response = client.get(PARAMS)
+
+    assert response.status_code == 200
+    assert attempts == 2
 
 
 # 10. 超過最大重試次數
 def test_retry_exhausted():
-    with (
-        patch("trade_analytics.extract.requests.get") as mock_get,
-        patch("trade_analytics.extract.time.sleep"),
-    ):
-        mock_get.return_value = make_response(500)
+    attempts = 0
 
-        with pytest.raises(RuntimeError):
-            request_with_retry(PARAMS)
+    def handler(request):
+        nonlocal attempts
+        attempts += 1
+        return make_response(500)
 
-    assert mock_get.call_count == 3
+    http_client, client = make_client(handler, max_attempts=3)
+
+    with http_client:
+        with pytest.raises(httpx.HTTPStatusError):
+            client.get(PARAMS)
+
+    assert attempts == 3
