@@ -1,10 +1,10 @@
 import httpx
 import logging
 
-from trade_analytics.batch import execute_batch, plan_batch_queries
-from trade_analytics.client import ComtradeClient
-from trade_analytics.logging_config import setup_logging
-from trade_analytics.manifest import build_manifest, verify_manifest
+from trade_analytics.ingestion.batch import execute_batch, plan_batch_queries
+from trade_analytics.ingestion.client import ComtradeClient
+from trade_analytics.utils.logging_config import setup_logging
+from trade_analytics.utils.manifest import build_manifest, verify_manifest
 
 
 REPORTERS = [842, 156]
@@ -32,7 +32,6 @@ def main():
     # 3. Manifest & Checksum
     manifest = build_manifest(results)
     verify_manifest(results, manifest)
-    save_batch_artifacts(results, manifest)
 
     logger.info("成功完成 %d 組 Query，Manifest 驗證通過", len(results))
 

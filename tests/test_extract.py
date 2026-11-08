@@ -6,9 +6,9 @@ import pytest
 from pydantic import ValidationError
 from tenacity import wait_fixed
 
-from trade_analytics.client import ComtradeClient
-from trade_analytics.extract import fetch_trade_data, fetch_records, parse_payload
-from trade_analytics.query import ComtradeQuery, QueryType
+from trade_analytics.ingestion.client import ComtradeClient
+from trade_analytics.ingestion.extract import fetch_trade_data, fetch_records, parse_payload
+from trade_analytics.ingestion.query import ComtradeQuery, QueryType
 
 
 PARAMS = {

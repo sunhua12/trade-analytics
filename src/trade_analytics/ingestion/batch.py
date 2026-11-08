@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from itertools import product
 from typing import Any
 
-from trade_analytics.client import ComtradeClient
-from trade_analytics.extract import fetch_records
-from trade_analytics.query import ComtradeQuery, QueryType
+from trade_analytics.ingestion.client import ComtradeClient
+from trade_analytics.ingestion.extract import fetch_records
+from trade_analytics.ingestion.query import ComtradeQuery, QueryType
 
 
 logger = logging.getLogger(__name__)
