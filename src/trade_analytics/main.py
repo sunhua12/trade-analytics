@@ -32,7 +32,6 @@ def main():
     # 3. Manifest & Checksum
     manifest = build_manifest(results)
     verify_manifest(results, manifest)
-    save_batch_artifacts(results, manifest)
 
     logger.info("成功完成 %d 組 Query，Manifest 驗證通過", len(results))
 
