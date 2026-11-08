@@ -1,38 +1,38 @@
 import logging
-from datetime import datetime
-from enum import StrEnum
+import datetime
+import enum
 
-from pydantic import BaseModel, Field, field_validator
+import pydantic
 
 
 logger = logging.getLogger(__name__)
 
 
-class QueryType(StrEnum):
+class QueryType(enum.StrEnum):
     WORLD_TOTAL = "world_total"
     PARTNER_DETAIL = "partner_detail"
 
 
-class ComtradeQuery(BaseModel):
+class ComtradeQuery(pydantic.BaseModel):
     period: str
     cmd_code: str
-    reporter_code: int = Field(gt=0)
+    reporter_code: int = pydantic.Field(gt=0)
     query_type: QueryType
 
-    @field_validator("period")
+    @pydantic.field_validator("period")
     @classmethod
     def validate_period(cls, value: str) -> str:
         if len(value) != 6 or not value.isascii() or not value.isdigit():
             raise ValueError("period must use YYYYMM format")
 
         try:
-            datetime.strptime(value, "%Y%m")
+            datetime.datetime.strptime(value, "%Y%m")
         except ValueError as exc:
             raise ValueError("period must be a valid month") from exc
 
         return value
 
-    @field_validator("cmd_code")
+    @pydantic.field_validator("cmd_code")
     @classmethod
     def validate_cmd_code(cls, value: str) -> str:
         if len(value) != 6 or not value.isascii() or not value.isdigit():

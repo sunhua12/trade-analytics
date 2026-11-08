@@ -2,9 +2,9 @@ import logging
 
 from google.cloud import bigquery
 
-from trade_analytics.warehouse.bigquery_client import create_bigquery_client, validate_datasets
-from trade_analytics.warehouse.bigquery_config import load_bigquery_config
-from trade_analytics.utils.logging_config import setup_logging
+from trade_analytics.warehouse import bigquery_client
+from trade_analytics.warehouse import bigquery_config
+from trade_analytics.utils import logging_config
 
 
 logger = logging.getLogger("trade_analytics.inspect_bigquery")
@@ -66,13 +66,13 @@ def inspect_dataset(client: bigquery.Client, project_id: str, dataset_id: str) -
 
 
 def main() -> None:
-    setup_logging()
+    logging_config.setup_logging()
 
-    config = load_bigquery_config()
-    client = create_bigquery_client(config)
+    config = bigquery_config.load_bigquery_config()
+    client = bigquery_client.create_bigquery_client(config)
 
     try:
-        validate_datasets(client, config)
+        bigquery_client.validate_datasets(client, config)
         inspect_dataset(client, config.project_id, config.raw_dataset)
         inspect_dataset(client, config.project_id, config.analytics_dataset)
         logger.info("BigQuery Schema 檢查完成")

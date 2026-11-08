@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+import decimal
 
 # 將 UN Comtrade API 的原始欄位名稱對應到標準化欄位名稱
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ def transform_record(record: dict) -> dict:
     transformed = {target_field: record[source_field] for source_field, target_field in FIELD_MAPPING.items()}
 
     # 將金額統一轉換為 Decimal，確保後續計算的數值精度
-    transformed["primary_value"] = Decimal(str(transformed["primary_value"]))
+    transformed["primary_value"] = decimal.Decimal(str(transformed["primary_value"]))
 
     return transformed
 

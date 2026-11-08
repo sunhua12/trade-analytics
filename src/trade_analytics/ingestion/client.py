@@ -1,9 +1,9 @@
 import logging
 import httpx
 
-from tenacity import Retrying, before_sleep_log, retry_if_exception, stop_after_attempt
-from tenacity.wait import wait_base
-from trade_analytics.ingestion.retry import WaitRetryAfter
+import tenacity
+from tenacity import wait as wait_module
+from trade_analytics.ingestion import retry
 
 logger = logging.getLogger(__name__)
 
@@ -24,22 +24,22 @@ class ComtradeClient:
                  http_client: httpx.Client,
                  base_url: str = BASE_URL,
                  max_attempts: int = 3,
-                 wait: wait_base | None = None):
+                 wait: wait_module.wait_base | None = None):
         if max_attempts < 1:
             raise ValueError("max_attempts 必須大於 0")
 
         self.http_client = http_client
         self.base_url = base_url
         self.max_attempts = max_attempts
-        self.wait = wait if wait is not None else WaitRetryAfter()
+        self.wait = wait if wait is not None else retry.WaitRetryAfter()
 
     def get(self, params: dict[str, str | int]) -> httpx.Response:
-        retrying = Retrying(
-            retry=retry_if_exception(is_retryable),
-            stop=stop_after_attempt(self.max_attempts),
+        retrying = tenacity.Retrying(
+            retry=tenacity.retry_if_exception(is_retryable),
+            stop=tenacity.stop_after_attempt(self.max_attempts),
             wait=self.wait,
             reraise=True,
-            before_sleep=before_sleep_log(logger, logging.WARNING),
+            before_sleep=tenacity.before_sleep_log(logger, logging.WARNING),
         )
         return retrying(self._request, params)
 

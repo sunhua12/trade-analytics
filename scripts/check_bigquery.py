@@ -1,21 +1,21 @@
 import logging
 
-from trade_analytics.warehouse.bigquery_client import create_bigquery_client, validate_datasets
-from trade_analytics.warehouse.bigquery_config import load_bigquery_config
-from trade_analytics.utils.logging_config import setup_logging
+from trade_analytics.warehouse import bigquery_client
+from trade_analytics.warehouse import bigquery_config
+from trade_analytics.utils import logging_config
 
 
 logger = logging.getLogger("trade_analytics.check_bigquery")
 
 
 def main():
-    setup_logging()
+    logging_config.setup_logging()
 
-    config = load_bigquery_config()
-    client = create_bigquery_client(config)
+    config = bigquery_config.load_bigquery_config()
+    client = bigquery_client.create_bigquery_client(config)
 
     try:
-        validate_datasets(client, config)
+        bigquery_client.validate_datasets(client, config)
         logger.info("BigQuery 環境驗證完成")
     finally:
         client.close()

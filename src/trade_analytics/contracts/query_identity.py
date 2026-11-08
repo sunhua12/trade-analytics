@@ -1,10 +1,10 @@
 
 import hashlib
 import json
-from typing import Any
+import typing
 
-from trade_analytics.ingestion.batch import BatchResult
-from trade_analytics.ingestion.query import ComtradeQuery
+from trade_analytics.ingestion import batch
+from trade_analytics.ingestion import query as query_module
 
 
 KEY_VERSION = 1
@@ -30,39 +30,7 @@ NON_KEY_FIELDS = {
 }
 
 
-def build_record_business_key(record: dict[str, Any], query: ComtradeQuery) -> str:
-    """根據來源維度產生候選 Record Business Key。"""
-    dimensions = {field: record[field] for field in RECORD_KEY_FIELDS}
-
-    return calculate_key({
-        "key_version": KEY_VERSION,
-        "source_query_key": build_source_query_key(query),
-        "dimensions": dimensions,
-    })
-
-def build_source_query_key(query: ComtradeQuery) -> str:
-    """同一組 Query 條件產生相同的 Source Query Key。"""
-    return calculate_key(build_query_scope(query))
-
-def calculate_key(value: dict[str, Any]) -> str:
-    """使用 SHA-256 產生穩定的識別碼。"""
-    data = canonical_json(value).encode("utf-8")
-    return hashlib.sha256(data).hexdigest()
-
-def build_query_scope(query: ComtradeQuery) -> dict[str, Any]:
-    """根據 API 查詢條件建立 Query Scope。"""
-    return {
-        "key_version": KEY_VERSION,
-        "query_type": query.query_type.value,
-        "params": query.to_params(),
-    }
-
-def canonical_json(value: dict[str, Any]) -> str:
-    """將 Dictionary 轉換為欄位排序固定的 JSON 字串。"""
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
-
-
-def validate_record_uniqueness(result: BatchResult) -> None:
+def validate_record_uniqueness(result: batch.BatchResult) -> None:
     """候選 Business Key 重複時拋出錯誤，不自動去重。"""
     duplicates = find_duplicate_record_keys(result)
 
@@ -75,7 +43,7 @@ def validate_record_uniqueness(result: BatchResult) -> None:
             f"duplicate_count={len(duplicates)}"
         )
 
-def find_duplicate_record_keys(result: BatchResult) -> list[dict[str, Any]]:
+def find_duplicate_record_keys(result: batch.BatchResult) -> list[dict[str, typing.Any]]:
     """找出同一組 Query 中具有相同候選 Business Key 的紀錄。"""
     first_seen: dict[str, int] = {}
     duplicates = []
@@ -94,8 +62,38 @@ def find_duplicate_record_keys(result: BatchResult) -> list[dict[str, Any]]:
 
     return duplicates
 
+def build_record_business_key(record: dict[str, typing.Any], query: query_module.ComtradeQuery) -> str:
+    """根據來源維度產生候選 Record Business Key。"""
+    dimensions = {field: record[field] for field in RECORD_KEY_FIELDS}
 
-def find_unmodeled_fields(result: BatchResult) -> set[str]:
+    return calculate_key({
+        "key_version": KEY_VERSION,
+        "source_query_key": build_source_query_key(query),
+        "dimensions": dimensions,
+    })
+
+def build_source_query_key(query: query_module.ComtradeQuery) -> str:
+    """同一組 Query 條件產生相同的 Source Query Key。"""
+    return calculate_key(build_query_scope(query))
+
+def calculate_key(value: dict[str, typing.Any]) -> str:
+    """使用 SHA-256 產生穩定的識別碼。"""
+    data = canonical_json(value).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
+
+def build_query_scope(query: query_module.ComtradeQuery) -> dict[str, typing.Any]:
+    """根據 API 查詢條件建立 Query Scope。"""
+    return {
+        "key_version": KEY_VERSION,
+        "query_type": query.query_type.value,
+        "params": query.to_params(),
+    }
+
+def canonical_json(value: dict[str, typing.Any]) -> str:
+    """將 Dictionary 轉換為欄位排序固定的 JSON 字串。"""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
+def find_unmodeled_fields(result: batch.BatchResult) -> set[str]:
     """找出未納入候選 Business Key，也未列入已知非 Key 欄位的來源欄位。"""
     known_fields = set(RECORD_KEY_FIELDS) | NON_KEY_FIELDS
 

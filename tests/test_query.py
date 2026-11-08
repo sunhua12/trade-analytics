@@ -1,26 +1,26 @@
 import pytest
-from pydantic import ValidationError
+import pydantic
 
-from trade_analytics.ingestion.query import ComtradeQuery, QueryType
+from trade_analytics.ingestion import query as query_module
 
 
 def test_world_query_to_params():
-    query = ComtradeQuery(
+    query = query_module.ComtradeQuery(
         period="202401",
         cmd_code="854231",
         reporter_code=842,
-        query_type=QueryType.WORLD_TOTAL,
+        query_type=query_module.QueryType.WORLD_TOTAL,
     )
 
     assert query.to_params()["partnerCode"] == 0
 
 
 def test_partner_query_omits_partner_code():
-    query = ComtradeQuery(
+    query = query_module.ComtradeQuery(
         period="202401",
         cmd_code="854231",
         reporter_code=842,
-        query_type=QueryType.PARTNER_DETAIL,
+        query_type=query_module.QueryType.PARTNER_DETAIL,
     )
 
     assert "partnerCode" not in query.to_params()
@@ -39,9 +39,9 @@ def test_invalid_query_values_raise_validation_error(field, value):
         "period": "202401",
         "cmd_code": "854231",
         "reporter_code": 842,
-        "query_type": QueryType.WORLD_TOTAL,
+        "query_type": query_module.QueryType.WORLD_TOTAL,
     }
     values[field] = value
 
-    with pytest.raises(ValidationError):
-        ComtradeQuery(**values)
+    with pytest.raises(pydantic.ValidationError):
+        query_module.ComtradeQuery(**values)

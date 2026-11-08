@@ -1,7 +1,7 @@
 
 from google.cloud import bigquery
 
-from trade_analytics.warehouse.bigquery_config import BigQueryConfig
+from trade_analytics.warehouse import bigquery_config
 
 
 LANDING_TABLE = "comtrade_landing"
@@ -77,14 +77,14 @@ INGESTION_RUNS_SCHEMA = [
 ]
 
 
-def build_landing_table(config: BigQueryConfig) -> bigquery.Table:
+def build_landing_table(config: bigquery_config.BigQueryConfig) -> bigquery.Table:
     """建立 Landing Table 定義，不會呼叫 BigQuery API。"""
     table = bigquery.Table(config.raw_table(LANDING_TABLE), schema=LANDING_SCHEMA)
     table.description = "UN Comtrade batch landing records pending validation."
     return table
 
 
-def build_raw_table(config: BigQueryConfig) -> bigquery.Table:
+def build_raw_table(config: bigquery_config.BigQueryConfig) -> bigquery.Table:
     """建立 Raw Table 定義，使用月份分區與 Reporter、商品叢集。"""
     table = bigquery.Table(config.raw_table(RAW_TABLE), schema=RAW_SCHEMA)
     table.description = "Validated UN Comtrade raw records with ingestion lineage."
@@ -98,14 +98,14 @@ def build_raw_table(config: BigQueryConfig) -> bigquery.Table:
     return table
 
 
-def build_ingestion_runs_table(config: BigQueryConfig) -> bigquery.Table:
+def build_ingestion_runs_table(config: bigquery_config.BigQueryConfig) -> bigquery.Table:
     """建立 Ingestion Metadata Table 定義。"""
     table = bigquery.Table(config.raw_table(INGESTION_RUNS_TABLE), schema=INGESTION_RUNS_SCHEMA)
     table.description = "UN Comtrade ingestion execution and revision metadata."
     return table
 
 
-def build_table_definitions(config: BigQueryConfig) -> list[bigquery.Table]:
+def build_table_definitions(config: bigquery_config.BigQueryConfig) -> list[bigquery.Table]:
     """回傳所有 BigQuery Table 定義，不會建立雲端資源。"""
     return [
         build_landing_table(config),

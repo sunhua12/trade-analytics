@@ -1,38 +1,38 @@
 import hashlib
 import json
 import logging
-from dataclasses import dataclass
-from decimal import Decimal
-from typing import Any
+import dataclasses
+import decimal
+import typing
 
-from trade_analytics.ingestion.batch import BatchResult
+from trade_analytics.ingestion import batch
 
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclasses.dataclass
 class ManifestEntry:
-    query: dict[str, Any]
+    query: dict[str, typing.Any]
     record_count: int
     size_bytes: int
     sha256: str
 
 
-@dataclass
+@dataclasses.dataclass
 class BatchManifest:
     schema_version: int
     entries: list[ManifestEntry]
 
 
-def serialize_decimal(value: Any) -> str:
-    if isinstance(value, Decimal):
+def serialize_decimal(value: typing.Any) -> str:
+    if isinstance(value, decimal.Decimal):
         return str(value)
 
     raise TypeError(f"無法序列化的型別：{type(value).__name__}")
 
 
-def serialize_records(records: list[dict[str, Any]]) -> bytes:
+def serialize_records(records: list[dict[str, typing.Any]]) -> bytes:
     """將交易紀錄轉換為固定格式的 NDJSON Bytes。"""
     lines = [json.dumps(record, default=serialize_decimal, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False) for record in records]
     text = "\n".join(lines) + ("\n" if lines else "")
@@ -44,7 +44,7 @@ def calculate_sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def build_manifest(results: list[BatchResult]) -> BatchManifest:
+def build_manifest(results: list[batch.BatchResult]) -> BatchManifest:
     """為整個 Batch 建立 Manifest。"""
     entries = []
 
@@ -74,7 +74,7 @@ def verify_artifact(data: bytes, entry: ManifestEntry) -> None:
         raise ValueError("Artifact 筆數與 Manifest 不一致")
 
 
-def verify_manifest(results: list[BatchResult], manifest: BatchManifest) -> None:
+def verify_manifest(results: list[batch.BatchResult], manifest: BatchManifest) -> None:
     """驗證整批結果是否與 Manifest 一致。"""
     if manifest.schema_version != 1:
         raise ValueError("不支援的 Manifest Schema Version")

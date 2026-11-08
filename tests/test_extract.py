@@ -1,14 +1,14 @@
 import json
-from decimal import Decimal
+import decimal
 
 import httpx
 import pytest
-from pydantic import ValidationError
-from tenacity import wait_fixed
+import pydantic
+import tenacity
 
-from trade_analytics.ingestion.client import ComtradeClient
-from trade_analytics.ingestion.extract import fetch_trade_data, fetch_records, parse_payload
-from trade_analytics.ingestion.query import ComtradeQuery, QueryType
+from trade_analytics.ingestion import client as client_module
+from trade_analytics.ingestion import extract
+from trade_analytics.ingestion import query
 
 
 PARAMS = {
@@ -39,8 +39,8 @@ BASE_RECORD = {
 
 def test_api():
     with httpx.Client(timeout=30.0) as http_client:
-        client = ComtradeClient(http_client)
-        payload = fetch_trade_data(client, PARAMS)
+        client = client_module.ComtradeClient(http_client)
+        payload = extract.fetch_trade_data(client, PARAMS)
 
     # 觀察外層資料
     print("\n外層資料型別：", type(payload).__name__)
@@ -65,7 +65,7 @@ def test_api():
                 print(f"{field:30} {type(value).__name__:12} {value!r}")
 
             print("\nprimaryValue 型別：", type(rows[0]["primaryValue"]).__name__)
-            assert isinstance(rows[0]["primaryValue"], Decimal)
+            assert isinstance(rows[0]["primaryValue"], decimal.Decimal)
 
 
 
@@ -82,22 +82,22 @@ def make_response(status_code: int = 200, data: list | None = None) -> httpx.Res
 def make_client(handler, max_attempts: int = 3):
     """建立使用 MockTransport 的 HTTP Client。"""
     http_client = httpx.Client(transport=httpx.MockTransport(handler))
-    client = ComtradeClient(http_client, max_attempts=max_attempts, wait=wait_fixed(0))
+    client = client_module.ComtradeClient(http_client, max_attempts=max_attempts, wait=tenacity.wait_fixed(0))
     return http_client, client
 
 
 # 1. JSON 解析成功
 def test_parse_payload():
     text = '{"data": [{"primaryValue": 123.45}]}'
-    result = parse_payload(text)
+    result = extract.parse_payload(text)
 
-    assert result["data"][0]["primaryValue"] == Decimal("123.45")
+    assert result["data"][0]["primaryValue"] == decimal.Decimal("123.45")
 
 
 # 2. JSON 結構錯誤
 def test_parse_payload_invalid():
     with pytest.raises(ValueError):
-        parse_payload("[]")
+        extract.parse_payload("[]")
 
 
 # 3. Pydantic Schema 驗證成功
@@ -108,11 +108,11 @@ def test_fetch_records_valid_schema():
     http_client, client = make_client(handler)
 
     with http_client:
-        records = fetch_records(client, PARAMS)
+        records = extract.fetch_records(client, PARAMS)
 
     assert len(records) == 1
     assert records[0]["reporterCode"] == 842
-    assert records[0]["primaryValue"] == Decimal("1000")
+    assert records[0]["primaryValue"] == decimal.Decimal("1000")
 
 
 # 4. Pydantic Schema 驗證失敗
@@ -123,8 +123,8 @@ def test_fetch_records_invalid_schema():
     http_client, client = make_client(handler)
 
     with http_client:
-        with pytest.raises(ValidationError):
-            fetch_records(client, PARAMS)
+        with pytest.raises(pydantic.ValidationError):
+            extract.fetch_records(client, PARAMS)
 
 
 # 5. World + Partner：成功取得資料
@@ -142,10 +142,10 @@ def test_fetch_trade_data_success():
     http_client, client = make_client(handler)
 
     with http_client:
-        result = fetch_trade_data(client, PARAMS)
+        result = extract.fetch_trade_data(client, PARAMS)
 
     assert len(requests_seen) == 2
-    assert result["world"][0]["primaryValue"] == Decimal("1000")
+    assert result["world"][0]["primaryValue"] == decimal.Decimal("1000")
     assert [record["partnerCode"] for record in result["partners"]] == [156, 392]
 
     world_params = requests_seen[0].url.params

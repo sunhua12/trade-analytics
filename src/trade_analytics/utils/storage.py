@@ -1,26 +1,26 @@
 import logging
 import hashlib
 import json
-from datetime import datetime, timezone
-from pathlib import Path
+import datetime
+import pathlib
 
 
 logger = logging.getLogger(__name__)
 
 
-def write_json(path: Path, data: dict) -> None:
+def write_json(path: pathlib.Path, data: dict) -> None:
     with path.open("w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2, default=str, )
         file.write("\n")
 
 
-def write_ndjson(path: Path, records: list[dict]) -> None:
+def write_ndjson(path: pathlib.Path, records: list[dict]) -> None:
     with path.open("w", encoding="utf-8") as file:
         for record in records:
             file.write(json.dumps(record, ensure_ascii=False, default=str, ) + "\n")
 
 
-def calculate_sha256(path: Path) -> str:
+def calculate_sha256(path: pathlib.Path) -> str:
     hasher = hashlib.sha256()
 
     with path.open("rb") as file:
@@ -30,10 +30,10 @@ def calculate_sha256(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def save_trade_data(trade_data: dict, summary: dict, output_dir: str | Path = "output", ) -> dict:
+def save_trade_data(trade_data: dict, summary: dict, output_dir: str | pathlib.Path = "output", ) -> dict:
     # 依照月份建立輸出資料夾
     period = summary["period"]
-    destination = Path(output_dir) / period
+    destination = pathlib.Path(output_dir) / period
     destination.mkdir(parents=True, exist_ok=True)
 
     records_path = destination / "trade_records.ndjson"
@@ -48,7 +48,7 @@ def save_trade_data(trade_data: dict, summary: dict, output_dir: str | Path = "o
     # 建立 Manifest，記錄檔案完整性資訊
     manifest = {
         "period": period,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "record_count": len(records),
         "world_count": len(trade_data["world"]),
         "partner_count": len(trade_data["partners"]),
