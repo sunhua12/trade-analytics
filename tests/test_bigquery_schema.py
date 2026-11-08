@@ -3,24 +3,13 @@ import pytest
 
 from google.cloud import bigquery
 
-from trade_analytics.warehouse.bigquery_config import BigQueryConfig
-from trade_analytics.warehouse.bigquery_schema import (
-    LANDING_TABLE,
-    RAW_TABLE,
-    INGESTION_RUNS_TABLE,
-    LANDING_SCHEMA,
-    RAW_SCHEMA,
-    INGESTION_RUNS_SCHEMA,
-    build_landing_table,
-    build_raw_table,
-    build_ingestion_runs_table,
-    build_table_definitions,
-)
+from trade_analytics.warehouse import bigquery_config
+from trade_analytics.warehouse import bigquery_schema
 
 
 @pytest.fixture
-def config() -> BigQueryConfig:
-    return BigQueryConfig(project_id="test-project", location="asia-northeast1")
+def config() -> bigquery_config.BigQueryConfig:
+    return bigquery_config.BigQueryConfig(project_id="test-project", location="asia-northeast1")
 
 
 def get_fields(schema: list[bigquery.SchemaField]) -> dict[str, bigquery.SchemaField]:
@@ -28,29 +17,29 @@ def get_fields(schema: list[bigquery.SchemaField]) -> dict[str, bigquery.SchemaF
 
 
 def test_table_names():
-    assert LANDING_TABLE == "comtrade_landing"
-    assert RAW_TABLE == "comtrade_records"
-    assert INGESTION_RUNS_TABLE == "ingestion_runs"
+    assert bigquery_schema.LANDING_TABLE == "comtrade_landing"
+    assert bigquery_schema.RAW_TABLE == "comtrade_records"
+    assert bigquery_schema.INGESTION_RUNS_TABLE == "ingestion_runs"
 
 
 def test_build_landing_table(config):
-    table = build_landing_table(config)
+    table = bigquery_schema.build_landing_table(config)
 
     assert table.reference.project == "test-project"
     assert table.reference.dataset_id == "trade_raw"
     assert table.reference.table_id == "comtrade_landing"
-    assert table.schema == LANDING_SCHEMA
+    assert table.schema == bigquery_schema.LANDING_SCHEMA
     assert table.time_partitioning is None
     assert table.clustering_fields is None
 
 
 def test_build_raw_table(config):
-    table = build_raw_table(config)
+    table = bigquery_schema.build_raw_table(config)
 
     assert table.reference.project == "test-project"
     assert table.reference.dataset_id == "trade_raw"
     assert table.reference.table_id == "comtrade_records"
-    assert table.schema == RAW_SCHEMA
+    assert table.schema == bigquery_schema.RAW_SCHEMA
     assert table.time_partitioning.type_ == "MONTH"
     assert table.time_partitioning.field == "period_start_date"
     assert table.time_partitioning.expiration_ms == 0
@@ -58,18 +47,18 @@ def test_build_raw_table(config):
 
 
 def test_build_ingestion_runs_table(config):
-    table = build_ingestion_runs_table(config)
+    table = bigquery_schema.build_ingestion_runs_table(config)
 
     assert table.reference.project == "test-project"
     assert table.reference.dataset_id == "trade_raw"
     assert table.reference.table_id == "ingestion_runs"
-    assert table.schema == INGESTION_RUNS_SCHEMA
+    assert table.schema == bigquery_schema.INGESTION_RUNS_SCHEMA
     assert table.time_partitioning is None
     assert table.clustering_fields is None
 
 
 def test_build_table_definitions(config):
-    tables = build_table_definitions(config)
+    tables = bigquery_schema.build_table_definitions(config)
 
     assert len(tables) == 3
     assert [table.table_id for table in tables] == [
@@ -80,7 +69,7 @@ def test_build_table_definitions(config):
     assert len({(table.project, table.dataset_id, table.table_id) for table in tables}) == 3
 
 
-@pytest.mark.parametrize("schema", [LANDING_SCHEMA, RAW_SCHEMA, INGESTION_RUNS_SCHEMA])
+@pytest.mark.parametrize("schema", [bigquery_schema.LANDING_SCHEMA, bigquery_schema.RAW_SCHEMA, bigquery_schema.INGESTION_RUNS_SCHEMA])
 def test_schema_has_no_duplicate_columns(schema):
     names = [field.name for field in schema]
 
@@ -88,7 +77,7 @@ def test_schema_has_no_duplicate_columns(schema):
 
 
 def test_landing_required_fields():
-    fields = get_fields(LANDING_SCHEMA)
+    fields = get_fields(bigquery_schema.LANDING_SCHEMA)
 
     required_columns = {
         "batch_id",
@@ -108,7 +97,7 @@ def test_landing_required_fields():
 
 
 def test_landing_numeric_fields_use_string():
-    fields = get_fields(LANDING_SCHEMA)
+    fields = get_fields(bigquery_schema.LANDING_SCHEMA)
 
     assert fields["primary_value_text"].field_type == "STRING"
     assert fields["primary_value_text"].mode == "REQUIRED"
@@ -119,7 +108,7 @@ def test_landing_numeric_fields_use_string():
 
 
 def test_landing_hs_version_nullable():
-    fields = get_fields(LANDING_SCHEMA)
+    fields = get_fields(bigquery_schema.LANDING_SCHEMA)
 
     assert fields["classification_code"].field_type == "STRING"
     assert fields["hs_version"].field_type == "STRING"
@@ -127,7 +116,7 @@ def test_landing_hs_version_nullable():
 
 
 def test_raw_primary_value_precision():
-    fields = get_fields(RAW_SCHEMA)
+    fields = get_fields(bigquery_schema.RAW_SCHEMA)
 
     assert fields["primary_value"].field_type == "BIGNUMERIC"
     assert fields["primary_value"].mode == "REQUIRED"
@@ -138,14 +127,14 @@ def test_raw_primary_value_precision():
 
 
 def test_raw_partition_field():
-    fields = get_fields(RAW_SCHEMA)
+    fields = get_fields(bigquery_schema.RAW_SCHEMA)
 
     assert fields["period_start_date"].field_type == "DATE"
     assert fields["period_start_date"].mode == "REQUIRED"
 
 
 def test_raw_lineage_fields():
-    fields = get_fields(RAW_SCHEMA)
+    fields = get_fields(bigquery_schema.RAW_SCHEMA)
 
     required_columns = {
         "batch_id",
@@ -162,7 +151,7 @@ def test_raw_lineage_fields():
 
 
 def test_ingestion_runs_metadata_fields():
-    fields = get_fields(INGESTION_RUNS_SCHEMA)
+    fields = get_fields(bigquery_schema.INGESTION_RUNS_SCHEMA)
 
     expected_types = {
         "batch_id": "STRING",
@@ -185,7 +174,7 @@ def test_ingestion_runs_metadata_fields():
 
 
 def test_ingestion_runs_required_fields():
-    fields = get_fields(INGESTION_RUNS_SCHEMA)
+    fields = get_fields(bigquery_schema.INGESTION_RUNS_SCHEMA)
 
     required_columns = {"batch_id", "source_query_key", "query_type", "status", "started_at"}
 

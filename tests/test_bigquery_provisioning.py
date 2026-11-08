@@ -1,23 +1,17 @@
 
-from unittest.mock import Mock
+from unittest import mock
 
 import pytest
-from google.api_core.exceptions import NotFound
+from google.api_core import exceptions
 from google.cloud import bigquery
 
-from trade_analytics.warehouse.bigquery_config import BigQueryConfig
-from trade_analytics.warehouse.bigquery_provisioning import (
-    provision_table,
-    provision_tables,
-    schema_signature,
-    validate_table,
-)
-from trade_analytics.warehouse.bigquery_schema import build_landing_table, build_raw_table, build_table_definitions
-from trade_analytics.warehouse.bigquery_provisioning import normalize_field_type
+from trade_analytics.warehouse import bigquery_config
+from trade_analytics.warehouse import bigquery_provisioning
+from trade_analytics.warehouse import bigquery_schema
 
 @pytest.fixture
 def config():
-    return BigQueryConfig(project_id="test-project", location="asia-northeast1")
+    return bigquery_config.BigQueryConfig(project_id="test-project", location="asia-northeast1")
 
 
 def make_existing_table(expected):
@@ -35,29 +29,29 @@ def test_schema_signature():
     second = [bigquery.SchemaField("amount", "BIGNUMERIC", mode="REQUIRED")]
     different = [bigquery.SchemaField("amount", "FLOAT64", mode="REQUIRED")]
 
-    assert schema_signature(first) == schema_signature(second)
-    assert schema_signature(first) != schema_signature(different)
+    assert bigquery_provisioning.schema_signature(first) == bigquery_provisioning.schema_signature(second)
+    assert bigquery_provisioning.schema_signature(first) != bigquery_provisioning.schema_signature(different)
 
 
 def test_dry_run_does_not_create_table(config):
-    client = Mock()
-    client.get_table.side_effect = NotFound("Table not found")
-    expected = build_landing_table(config)
+    client = mock.Mock()
+    client.get_table.side_effect = exceptions.NotFound("Table not found")
+    expected = bigquery_schema.build_landing_table(config)
 
-    status = provision_table(client, expected, apply=False)
+    status = bigquery_provisioning.provision_table(client, expected, apply=False)
 
     assert status == "planned"
     client.create_table.assert_not_called()
 
 
 def test_apply_creates_missing_table(config):
-    client = Mock()
-    expected = build_landing_table(config)
+    client = mock.Mock()
+    expected = bigquery_schema.build_landing_table(config)
     actual = make_existing_table(expected)
 
-    client.get_table.side_effect = [NotFound("Table not found"), actual]
+    client.get_table.side_effect = [exceptions.NotFound("Table not found"), actual]
 
-    status = provision_table(client, expected, apply=True)
+    status = bigquery_provisioning.provision_table(client, expected, apply=True)
 
     assert status == "created"
     client.create_table.assert_called_once_with(expected, exists_ok=False)
@@ -65,11 +59,11 @@ def test_apply_creates_missing_table(config):
 
 
 def test_existing_table_is_not_modified(config):
-    client = Mock()
-    expected = build_landing_table(config)
+    client = mock.Mock()
+    expected = bigquery_schema.build_landing_table(config)
     client.get_table.return_value = make_existing_table(expected)
 
-    status = provision_table(client, expected, apply=True)
+    status = bigquery_provisioning.provision_table(client, expected, apply=True)
 
     assert status == "existing"
     client.create_table.assert_not_called()
@@ -78,44 +72,44 @@ def test_existing_table_is_not_modified(config):
 
 
 def test_schema_drift_raises(config):
-    expected = build_raw_table(config)
+    expected = bigquery_schema.build_raw_table(config)
     actual = make_existing_table(expected)
     actual.schema = [bigquery.SchemaField("unexpected", "STRING")]
 
     with pytest.raises(ValueError, match="Schema 不一致"):
-        validate_table(actual, expected)
+        bigquery_provisioning.validate_table(actual, expected)
 
 
 def test_partition_drift_raises(config):
-    expected = build_raw_table(config)
+    expected = bigquery_schema.build_raw_table(config)
     actual = make_existing_table(expected)
     actual.time_partitioning = bigquery.TimePartitioning(type_="DAY", field="period_start_date")
 
     with pytest.raises(ValueError, match="Partitioning 不一致"):
-        validate_table(actual, expected)
+        bigquery_provisioning.validate_table(actual, expected)
 
 
 def test_dataset_default_partition_expiration_is_rejected(config):
-    expected = build_raw_table(config)
+    expected = bigquery_schema.build_raw_table(config)
     actual = make_existing_table(expected)
     actual.time_partitioning = bigquery.TimePartitioning(
         type_="MONTH", field="period_start_date", expiration_ms=5184000000
     )
 
     with pytest.raises(ValueError, match="Partitioning 不一致"):
-        validate_table(actual, expected)
+        bigquery_provisioning.validate_table(actual, expected)
 
 
 def test_removed_partition_expiration_is_accepted(config):
-    expected = build_raw_table(config)
+    expected = bigquery_schema.build_raw_table(config)
     actual = make_existing_table(expected)
     actual.time_partitioning = bigquery.TimePartitioning(type_="MONTH", field="period_start_date")
 
-    validate_table(actual, expected)
+    bigquery_provisioning.validate_table(actual, expected)
 
 
 def test_explicit_partition_expiration_drift_raises(config):
-    expected = build_raw_table(config)
+    expected = bigquery_schema.build_raw_table(config)
     expected.time_partitioning.expiration_ms = 86400000
     actual = make_existing_table(expected)
     actual.time_partitioning = bigquery.TimePartitioning(
@@ -123,23 +117,23 @@ def test_explicit_partition_expiration_drift_raises(config):
     )
 
     with pytest.raises(ValueError, match="Partitioning 不一致"):
-        validate_table(actual, expected)
+        bigquery_provisioning.validate_table(actual, expected)
 
 
 def test_clustering_drift_raises(config):
-    expected = build_raw_table(config)
+    expected = bigquery_schema.build_raw_table(config)
     actual = make_existing_table(expected)
     actual.clustering_fields = ["partner_code"]
 
     with pytest.raises(ValueError, match="Clustering 不一致"):
-        validate_table(actual, expected)
+        bigquery_provisioning.validate_table(actual, expected)
 
 
 def test_provision_tables_dry_run(config):
-    client = Mock()
-    client.get_table.side_effect = NotFound("Table not found")
+    client = mock.Mock()
+    client.get_table.side_effect = exceptions.NotFound("Table not found")
 
-    result = provision_tables(client, config, apply=False)
+    result = bigquery_provisioning.provision_tables(client, config, apply=False)
 
     assert result == {
         "comtrade_landing": "planned",
@@ -150,29 +144,29 @@ def test_provision_tables_dry_run(config):
 
 
 def test_provision_tables_checks_existing_schema_before_create(config):
-    client = Mock()
-    definitions = build_table_definitions(config)
+    client = mock.Mock()
+    definitions = bigquery_schema.build_table_definitions(config)
     invalid = make_existing_table(definitions[1])
     invalid.schema = [bigquery.SchemaField("unexpected", "STRING")]
 
     def get_table(reference):
         if reference.table_id == "comtrade_records":
             return invalid
-        raise NotFound("Table not found")
+        raise exceptions.NotFound("Table not found")
 
     client.get_table.side_effect = get_table
 
     with pytest.raises(ValueError, match="Schema 不一致"):
-        provision_tables(client, config, apply=True)
+        bigquery_provisioning.provision_tables(client, config, apply=True)
 
     client.create_table.assert_not_called()
 
 def test_normalize_field_type():
-    assert normalize_field_type("INT64") == "INTEGER"
-    assert normalize_field_type("INTEGER") == "INTEGER"
-    assert normalize_field_type("BOOL") == "BOOLEAN"
-    assert normalize_field_type("BOOLEAN") == "BOOLEAN"
-    assert normalize_field_type("BIGNUMERIC") == "BIGNUMERIC"
+    assert bigquery_provisioning.normalize_field_type("INT64") == "INTEGER"
+    assert bigquery_provisioning.normalize_field_type("INTEGER") == "INTEGER"
+    assert bigquery_provisioning.normalize_field_type("BOOL") == "BOOLEAN"
+    assert bigquery_provisioning.normalize_field_type("BOOLEAN") == "BOOLEAN"
+    assert bigquery_provisioning.normalize_field_type("BIGNUMERIC") == "BIGNUMERIC"
 
 
 def test_schema_aliases_are_equivalent():
@@ -186,11 +180,11 @@ def test_schema_aliases_are_equivalent():
         bigquery.SchemaField("is_original_classification", "BOOLEAN", mode="REQUIRED"),
     ]
 
-    assert schema_signature(expected) == schema_signature(actual)
+    assert bigquery_provisioning.schema_signature(expected) == bigquery_provisioning.schema_signature(actual)
 
 
 def test_schema_real_type_mismatch():
     expected = [bigquery.SchemaField("reporter_code", "INT64", mode="REQUIRED")]
     actual = [bigquery.SchemaField("reporter_code", "STRING", mode="REQUIRED")]
 
-    assert schema_signature(expected) != schema_signature(actual)
+    assert bigquery_provisioning.schema_signature(expected) != bigquery_provisioning.schema_signature(actual)

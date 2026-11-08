@@ -1,6 +1,6 @@
 import logging
 
-from typing import Any
+import typing
 
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ def validate_trade_data(trade_data: dict, params: dict) -> None:
                  params["period"], params["reporterCode"], params["cmdCode"])
 
 
-def validate_partner_data(params: dict[Any, Any], trade_data: dict[Any, Any]) -> None:
+def validate_partner_data(params: dict[typing.Any, typing.Any], trade_data: dict[typing.Any, typing.Any]) -> None:
     partner_records = trade_data["partners"]
 
     # 驗證 Partner 資料結構
@@ -48,7 +48,7 @@ def validate_partner_data(params: dict[Any, Any], trade_data: dict[Any, Any]) ->
         seen_keys.add(business_key)
 
 
-def validate_world_data(params: dict[Any, Any], trade_data: dict[Any, Any]) -> None:
+def validate_world_data(params: dict[typing.Any, typing.Any], trade_data: dict[typing.Any, typing.Any]) -> None:
     world_records = trade_data["world"]
 
     # 驗證 World 資料結構
@@ -67,7 +67,7 @@ def validate_world_data(params: dict[Any, Any], trade_data: dict[Any, Any]) -> N
             raise ValueError("World 的 partnerCode 必須為 0")
 
 
-def validate_data_structure(trade_data: dict[Any, Any]) -> None:
+def validate_data_structure(trade_data: dict[typing.Any, typing.Any]) -> None:
     if not isinstance(trade_data, dict):
         raise ValueError("trade_data 必須是 dict")
 

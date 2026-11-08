@@ -1,6 +1,6 @@
 import logging
-from decimal import Decimal
-from typing import Any
+import decimal
+import typing
 
 
 logger = logging.getLogger(__name__)
@@ -28,23 +28,23 @@ def aggregate_trade_data(trade_data: dict) -> dict:
     }
 
 
-def calc_partner_total(partner_records) -> Any | Decimal:
+def calc_partner_total(partner_records) -> typing.Any | decimal.Decimal:
     # Partner 金額合計僅作為統計資訊，不取代 World 總額
     partner_total = sum(
         (record["primary_value"] for record in partner_records),
-        Decimal("0"),
+        decimal.Decimal("0"),
     )
     return partner_total
 
 
-def calc_world_value(world_record) -> Any:
+def calc_world_value(world_record) -> typing.Any:
     world_value = world_record["primary_value"]
     if world_value < 0:
         raise ValueError("World value must not be negative")
     return world_value
 
 
-def calc_partner_summary(partner_records, world_value) -> list[Any]:
+def calc_partner_summary(partner_records, world_value) -> list[typing.Any]:
     partner_summary = []
     sorted_partners = sorted(partner_records, key=lambda record: record["primary_value"], reverse=True, )
     for rank, record in enumerate(sorted_partners, start=1):
@@ -60,9 +60,9 @@ def calc_partner_summary(partner_records, world_value) -> list[Any]:
     return partner_summary
 
 
-def calc_market_share(partner_value, world_value) -> Any:
+def calc_market_share(partner_value, world_value) -> typing.Any:
     if world_value == 0:
         market_share = None
     else:
-        market_share = (partner_value / world_value) * Decimal("100")
+        market_share = (partner_value / world_value) * decimal.Decimal("100")
     return market_share

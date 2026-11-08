@@ -1,11 +1,11 @@
 
 import logging
 
-from google.api_core.exceptions import NotFound
+from google.api_core import exceptions
 from google.cloud import bigquery
 
-from trade_analytics.warehouse.bigquery_config import BigQueryConfig
-from trade_analytics.warehouse.bigquery_schema import build_table_definitions
+from trade_analytics.warehouse import bigquery_config
+from trade_analytics.warehouse import bigquery_schema
 
 
 logger = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ def provision_table(client: bigquery.Client, expected: bigquery.Table, apply: bo
 
     try:
         actual = client.get_table(expected.reference)
-    except NotFound:
+    except exceptions.NotFound:
         if not apply:
             logger.info("Dry Run：Table 尚未存在，預計建立：%s", table_id)
             return "planned"
@@ -130,9 +130,9 @@ def provision_table(client: bigquery.Client, expected: bigquery.Table, apply: bo
     return "existing"
 
 
-def provision_tables(client: bigquery.Client, config: BigQueryConfig, apply: bool = False) -> dict[str, str]:
+def provision_tables(client: bigquery.Client, config: bigquery_config.BigQueryConfig, apply: bool = False) -> dict[str, str]:
     """檢查或建立 Stage 5 所需的三張 Table。"""
-    definitions = build_table_definitions(config)
+    definitions = bigquery_schema.build_table_definitions(config)
     results = {}
 
     # 先檢查所有既有 Table，避免發現 Schema Drift 後仍建立其他 Table。
@@ -141,7 +141,7 @@ def provision_tables(client: bigquery.Client, config: BigQueryConfig, apply: boo
 
         try:
             actual = client.get_table(table.reference)
-        except NotFound:
+        except exceptions.NotFound:
             continue
 
         validate_table(actual, table)

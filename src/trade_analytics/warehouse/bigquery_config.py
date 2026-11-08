@@ -1,8 +1,8 @@
 import os
-from dataclasses import dataclass
+import dataclasses
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class BigQueryConfig:
     project_id: str
     location: str
