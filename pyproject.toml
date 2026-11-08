@@ -1,0 +1,14 @@
+
+[tool.pytest.ini_options]
+
+testpaths = ["tests"]
+
+python_files = ["test_*.py"]
+
+pythonpath = ["src"]
+
+addopts = "-ra"
+
+markers = [
+    "integration: requires real BigQuery or other external services",
+]
