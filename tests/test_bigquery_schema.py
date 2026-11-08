@@ -3,8 +3,8 @@ import pytest
 
 from google.cloud import bigquery
 
-from trade_analytics.bigquery_config import BigQueryConfig
-from trade_analytics.bigquery_schema import (
+from trade_analytics.warehouse.bigquery_config import BigQueryConfig
+from trade_analytics.warehouse.bigquery_schema import (
     LANDING_TABLE,
     RAW_TABLE,
     INGESTION_RUNS_TABLE,

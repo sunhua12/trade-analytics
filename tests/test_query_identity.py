@@ -4,9 +4,9 @@ from decimal import Decimal
 
 import pytest
 
-from trade_analytics.batch import BatchResult
-from trade_analytics.query import ComtradeQuery, QueryType
-from trade_analytics.query_identity import (
+from trade_analytics.ingestion.batch import BatchResult
+from trade_analytics.ingestion.query import ComtradeQuery, QueryType
+from trade_analytics.contracts.query_identity import (
     build_query_scope,
     build_source_query_key,
     build_record_business_key,

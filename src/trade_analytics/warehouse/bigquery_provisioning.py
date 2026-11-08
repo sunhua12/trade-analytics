@@ -4,8 +4,8 @@ import logging
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 
-from trade_analytics.bigquery_config import BigQueryConfig
-from trade_analytics.bigquery_schema import build_table_definitions
+from trade_analytics.warehouse.bigquery_config import BigQueryConfig
+from trade_analytics.warehouse.bigquery_schema import build_table_definitions
 
 
 logger = logging.getLogger(__name__)

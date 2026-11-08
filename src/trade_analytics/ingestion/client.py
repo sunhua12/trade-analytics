@@ -3,7 +3,7 @@ import httpx
 
 from tenacity import Retrying, before_sleep_log, retry_if_exception, stop_after_attempt
 from tenacity.wait import wait_base
-from trade_analytics.retry import WaitRetryAfter
+from trade_analytics.ingestion.retry import WaitRetryAfter
 
 logger = logging.getLogger(__name__)
 

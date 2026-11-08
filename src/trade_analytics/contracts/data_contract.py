@@ -3,9 +3,9 @@ import json
 from decimal import Decimal
 from typing import Any
 
-from trade_analytics.batch import BatchResult
-from trade_analytics.bigquery_schema import LANDING_SCHEMA
-from trade_analytics.query import QueryType
+from trade_analytics.ingestion.batch import BatchResult
+from trade_analytics.warehouse.bigquery_schema import LANDING_SCHEMA
+from trade_analytics.ingestion.query import QueryType
 
 
 BIGNUMERIC_MAX = Decimal("5.7896044618658097711785492504343953926634992332820282019728792003956564819967E+38")

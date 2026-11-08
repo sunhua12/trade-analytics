@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from trade_analytics.query import ComtradeQuery, QueryType
+from trade_analytics.ingestion.query import ComtradeQuery, QueryType
 
 
 def test_world_query_to_params():

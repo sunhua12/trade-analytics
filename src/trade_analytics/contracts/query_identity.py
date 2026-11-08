@@ -3,8 +3,8 @@ import hashlib
 import json
 from typing import Any
 
-from trade_analytics.batch import BatchResult
-from trade_analytics.query import ComtradeQuery
+from trade_analytics.ingestion.batch import BatchResult
+from trade_analytics.ingestion.query import ComtradeQuery
 
 
 KEY_VERSION = 1

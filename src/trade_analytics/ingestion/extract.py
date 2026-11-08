@@ -3,9 +3,9 @@ import json
 from decimal import Decimal
 from typing import Any
 
-from trade_analytics.client import ComtradeClient
-from trade_analytics.query import ComtradeQuery, QueryType
-from trade_analytics.schemas import ComtradeResponse
+from trade_analytics.ingestion.client import ComtradeClient
+from trade_analytics.ingestion.query import ComtradeQuery, QueryType
+from trade_analytics.ingestion.schemas import ComtradeResponse
 
 
 logger = logging.getLogger(__name__)

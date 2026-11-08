@@ -1,7 +1,7 @@
 
 from google.cloud import bigquery
 
-from trade_analytics.bigquery_config import BigQueryConfig
+from trade_analytics.warehouse.bigquery_config import BigQueryConfig
 
 
 LANDING_TABLE = "comtrade_landing"

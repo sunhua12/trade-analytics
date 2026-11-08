@@ -1,10 +1,10 @@
 import httpx
 import logging
 
-from trade_analytics.batch import execute_batch, plan_batch_queries
-from trade_analytics.client import ComtradeClient
-from trade_analytics.logging_config import setup_logging
-from trade_analytics.manifest import build_manifest, verify_manifest
+from trade_analytics.ingestion.batch import execute_batch, plan_batch_queries
+from trade_analytics.ingestion.client import ComtradeClient
+from trade_analytics.utils.logging_config import setup_logging
+from trade_analytics.utils.manifest import build_manifest, verify_manifest
 
 
 REPORTERS = [842, 156]

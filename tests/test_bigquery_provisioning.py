@@ -5,15 +5,15 @@ import pytest
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
 
-from trade_analytics.bigquery_config import BigQueryConfig
-from trade_analytics.bigquery_provisioning import (
+from trade_analytics.warehouse.bigquery_config import BigQueryConfig
+from trade_analytics.warehouse.bigquery_provisioning import (
     provision_table,
     provision_tables,
     schema_signature,
     validate_table,
 )
-from trade_analytics.bigquery_schema import build_landing_table, build_raw_table, build_table_definitions
-from trade_analytics.bigquery_provisioning import normalize_field_type
+from trade_analytics.warehouse.bigquery_schema import build_landing_table, build_raw_table, build_table_definitions
+from trade_analytics.warehouse.bigquery_provisioning import normalize_field_type
 
 @pytest.fixture
 def config():

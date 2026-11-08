@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from trade_analytics.batch import BatchResult
+from trade_analytics.ingestion.batch import BatchResult
 
 
 logger = logging.getLogger(__name__)

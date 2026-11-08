@@ -1,8 +1,8 @@
 import logging
 
-from trade_analytics.bigquery_client import create_bigquery_client, validate_datasets
-from trade_analytics.bigquery_config import load_bigquery_config
-from trade_analytics.logging_config import setup_logging
+from trade_analytics.warehouse.bigquery_client import create_bigquery_client, validate_datasets
+from trade_analytics.warehouse.bigquery_config import load_bigquery_config
+from trade_analytics.utils.logging_config import setup_logging
 
 
 logger = logging.getLogger("trade_analytics.check_bigquery")
