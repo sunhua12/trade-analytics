@@ -1,0 +1,190 @@
+
+version: 2
+
+models:
+  - name: dim_reporter
+    description: >
+      One row per observed UN Comtrade reporter code.
+      Contains numeric identifiers only. Country names
+      require a separately governed reference source.
+
+    columns:
+      - name: reporter_code
+        description: Natural primary key for reporter.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: reporter_code_text
+        description: Reporter code represented as text.
+        data_tests:
+          - not_null
+
+  - name: dim_partner
+    description: >
+      One row per observed partner code.
+      Partner code 0 is the WORLD_TOTAL member,
+      not a physical trading partner country.
+
+    columns:
+      - name: partner_code
+        description: Natural primary key for partner.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: partner_type
+        description: >
+          WORLD_TOTAL or PARTNER_CODE.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - WORLD_TOTAL
+                  - PARTNER_CODE
+
+  - name: dim_commodity
+    description: >
+      One row per commodity code, classification code
+      and HS version combination. The key is generated
+      deterministically from these three attributes.
+
+    columns:
+      - name: commodity_key
+        description: Stable commodity dimension key.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: cmd_code
+        description: Commodity classification code.
+        data_tests:
+          - not_null
+
+      - name: classification_code
+        description: Source classification edition code.
+        data_tests:
+          - not_null
+
+      - name: hs_version
+        description: Optional HS version from Raw.
+
+  - name: dim_period
+    description: >
+      Monthly date dimension containing only periods
+      observed in the staging source records.
+
+    columns:
+      - name: period_key
+        description: YYYYMM integer month key.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: period_start_date
+        description: First date of the month.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: year_number
+        description: Calendar year.
+        data_tests:
+          - not_null
+
+      - name: month_number
+        description: Calendar month.
+        data_tests:
+          - not_null
+
+  - name: fct_trade_imports
+    description: >
+      One row per validated monthly trade observation.
+      World totals and partner details coexist in this
+      fact table but must not be aggregated together.
+      Only BOUNDED_PREVIEW source data is currently
+      available through the Stage 7 MVP.
+
+    columns:
+      - name: trade_observation_id
+        description: >
+          Stable business-grain identifier generated
+          from all required trade observation dimensions.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: period_key
+        description: Foreign key to dim_period.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_period')
+                field: period_key
+
+      - name: reporter_code
+        description: Foreign key to dim_reporter.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_reporter')
+                field: reporter_code
+
+      - name: partner_code
+        description: Foreign key to dim_partner.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_partner')
+                field: partner_code
+
+      - name: commodity_key
+        description: Foreign key to dim_commodity.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_commodity')
+                field: commodity_key
+
+      - name: query_type
+        description: >
+          Distinguishes world totals from partner detail.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - world_total
+                  - partner_detail
+
+      - name: import_value
+        description: >
+          Source primary import value retained as
+          BIGNUMERIC without rounding.
+        data_tests:
+          - not_null
+
+      - name: source_query_key
+        description: Deterministic source query identifier.
+        data_tests:
+          - not_null
+
+      - name: batch_id
+        description: Original ingestion batch ID.
+        data_tests:
+          - not_null
+
+      - name: revision_id
+        description: Content-derived Raw revision ID.
+        data_tests:
+          - not_null
+
+      - name: ingested_at
+        description: Original Raw ingestion timestamp.
+        data_tests:
+          - not_null

@@ -1,0 +1,58 @@
+docs-paths:
+  - docs
+
+name: trade_analytics
+version: "1.0.0"
+config-version: 2
+
+profile: trade_analytics
+
+model-paths:
+  - models
+
+analysis-paths:
+  - analyses
+
+test-paths:
+  - tests
+
+seed-paths:
+  - seeds
+
+macro-paths:
+  - macros
+
+snapshot-paths:
+  - snapshots
+
+target-path: target
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  trade_analytics:
+    +persist_docs:
+      relation: true
+      columns: true
+
+    staging:
+      +materialized: view
+      +tags:
+        - staging
+
+    intermediate:
+      +materialized: view
+      +tags:
+        - intermediate
+
+    core:
+      +materialized: table
+      +tags:
+        - core
+
+    marts:
+      +materialized: table
+      +tags:
+        - marts

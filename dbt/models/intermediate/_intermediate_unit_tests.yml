@@ -1,0 +1,179 @@
+
+version: 2
+
+unit_tests:
+  - name: unit_reconciliation_world_only
+    model: int_comtrade_scope_reconciliation
+    description: >
+      A world total without partner records must
+      be classified as WORLD_ONLY. The missing
+      partner total must remain NULL, not zero.
+
+    given:
+      - input: ref('stg_comtrade_world_total')
+        rows:
+          - period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 0
+            cmd_code: "854231"
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            primary_value: 1000
+
+      - input: ref('stg_comtrade_partner_detail')
+        rows: []
+
+    expect:
+      rows:
+        - period: "202401"
+          reporter_code: 842
+          cmd_code: "854231"
+          world_record_count: 1
+          partner_record_count: 0
+          observed_partner_count: 0
+          world_total_value: 1000
+          partner_total_value: null
+          reconciliation_gap: null
+          partner_coverage_ratio: null
+          reconciliation_status: WORLD_ONLY
+
+  - name: unit_reconciliation_matched_partners
+    model: int_comtrade_scope_reconciliation
+    description: >
+      A world total of 1000 and two partner
+      values of 600 and 400 must reconcile.
+
+    given:
+      - input: ref('stg_comtrade_world_total')
+        rows:
+          - period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 0
+            cmd_code: "854231"
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            primary_value: 1000
+
+      - input: ref('stg_comtrade_partner_detail')
+        rows:
+          - period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 156
+            cmd_code: "854231"
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            primary_value: 600
+
+          - period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 392
+            cmd_code: "854231"
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            primary_value: 400
+
+    expect:
+      rows:
+        - period: "202401"
+          reporter_code: 842
+          cmd_code: "854231"
+          world_record_count: 1
+          partner_record_count: 2
+          observed_partner_count: 2
+          world_total_value: 1000
+          partner_total_value: 1000
+          reconciliation_gap: 0
+          partner_coverage_ratio: 1
+          reconciliation_status: MATCHED_VALUE
+          is_value_reconciled: true
+
+  - name: unit_concentration_equal_partners
+    model: int_comtrade_concentration
+    description: >
+      Two equal partners must produce HHI 5000
+      and effective partner count 2.
+
+    given:
+      - input: ref('int_comtrade_partner_share')
+        rows:
+          - period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 156
+            cmd_code: "854231"
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            partner_import_value: 500
+            partner_total_value: 1000
+            world_total_value: 1000
+            partner_coverage_ratio: 1
+            reconciliation_status: MATCHED_VALUE
+            source_assurance_level: BOUNDED_PREVIEW
+            share_of_reported_partners: 0.5
+
+          - period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 392
+            cmd_code: "854231"
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            partner_import_value: 500
+            partner_total_value: 1000
+            world_total_value: 1000
+            partner_coverage_ratio: 1
+            reconciliation_status: MATCHED_VALUE
+            source_assurance_level: BOUNDED_PREVIEW
+            share_of_reported_partners: 0.5
+
+    expect:
+      rows:
+        - period: "202401"
+          reporter_code: 842
+          cmd_code: "854231"
+          partner_record_count: 2
+          observed_partner_count: 2
+          partner_total_value: 1000
+          hhi_reported_partners: 5000
+          effective_partner_count: 2
+          hhi_status: PROVISIONAL_BOUNDED_PREVIEW

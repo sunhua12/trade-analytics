@@ -1,0 +1,182 @@
+
+version: 2
+
+models:
+  - name: mart_import_trends
+    description: >
+      Monthly world-total import values with calendar-aligned
+      month-over-month and year-over-year comparisons.
+      Growth rates are ratios, not percentages.
+      Missing comparison periods produce NULL metrics.
+
+    columns:
+      - name: trade_observation_id
+        description: Original world-total fact identifier.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: period_start_date
+        description: Reporting month start date.
+        data_tests:
+          - not_null
+
+      - name: import_value
+        description: BIGNUMERIC world-total import value.
+        data_tests:
+          - not_null
+
+      - name: mom_status
+        description: Availability of month-over-month comparison.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - NO_PRIOR_MONTH
+                  - NEGATIVE_VALUE
+                  - ZERO_BASELINE
+                  - COMPARABLE
+
+      - name: yoy_status
+        description: Availability of year-over-year comparison.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - NO_PRIOR_YEAR
+                  - NEGATIVE_VALUE
+                  - ZERO_BASELINE
+                  - COMPARABLE
+
+  - name: mart_partner_shares
+    description: >
+      Partner-level import value, observed partner ranking,
+      and two explicitly distinguished share definitions.
+      Rankings are limited to returned source observations.
+
+    columns:
+      - name: period_start_date
+        data_tests:
+          - not_null
+
+      - name: partner_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_partner')
+                field: partner_code
+
+      - name: commodity_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_commodity')
+                field: commodity_key
+
+      - name: partner_import_value
+        data_tests:
+          - not_null
+
+      - name: share_quality_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - NO_WORLD_TOTAL
+                  - INVALID_SOURCE_VALUES
+                  - PARTNER_EXCEEDS_WORLD
+                  - ZERO_WORLD_TOTAL
+                  - PROVISIONAL_COMPARISON
+                  - NOT_COMPARABLE
+
+  - name: mart_product_rankings
+    description: >
+      Rankings of observed world-total commodity imports
+      within a common period, reporter, classification,
+      HS version, and commodity-code length.
+      These are not complete-universe product rankings.
+
+    columns:
+      - name: trade_observation_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: commodity_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_commodity')
+                field: commodity_key
+
+      - name: commodity_code_length
+        data_tests:
+          - not_null
+
+      - name: observed_commodity_count
+        data_tests:
+          - not_null
+
+      - name: ranking_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - INVALID_NEGATIVE_VALUE
+                  - SINGLE_OBSERVED_COMMODITY
+                  - OBSERVED_COMMODITIES_ONLY
+
+  - name: mart_trade_concentration
+    description: >
+      Provisional trade concentration and reconciliation
+      metrics, with explicit completeness limitations.
+      HHI refers only to observed partner records.
+
+    columns:
+      - name: period_start_date
+        data_tests:
+          - not_null
+
+      - name: period
+        data_tests:
+          - not_null
+
+      - name: reporter_code
+        data_tests:
+          - not_null
+
+      - name: reconciliation_status
+        data_tests:
+          - not_null
+
+      - name: hhi_status
+        data_tests:
+          - not_null
+
+      - name: concentration_quality_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - MISSING_WORLD_TOTAL
+                  - MISSING_PARTNER_DETAIL
+                  - INVALID_SOURCE_VALUES
+                  - NOT_CALCULABLE
+                  - PROVISIONAL_VALUE_MATCH
+                  - PARTNER_EXCEEDS_WORLD
+                  - PROVISIONAL_UNRECONCILED
+
+      - name: source_assurance_level
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BOUNDED_PREVIEW"]
