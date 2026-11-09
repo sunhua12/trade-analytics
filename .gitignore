@@ -5,3 +5,15 @@ __pycache__/
 .pytest_cache/
 .idea/
 logs/
+
+# Airflow virtual environment
+.venv-airflow/
+
+# Local Airflow runtime files
+airflow.db
+airflow.cfg
+standalone_admin_password.txt
+
+# Python cache
+__pycache__/
+*.pyc
