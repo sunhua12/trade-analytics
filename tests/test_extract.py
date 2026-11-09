@@ -1,5 +1,6 @@
 import json
 import decimal
+import os
 
 import httpx
 import pytest
@@ -37,6 +38,11 @@ BASE_RECORD = {
     "isOriginalClassification": True,
 }
 
+@pytest.mark.integration
+@pytest.mark.skipif(
+    os.getenv("RUN_COMTRADE_INTEGRATION") != "1",
+    reason="設定 RUN_COMTRADE_INTEGRATION=1 才呼叫真實 Comtrade API",
+)
 def test_api():
     with httpx.Client(timeout=30.0) as http_client:
         client = client_module.ComtradeClient(http_client)

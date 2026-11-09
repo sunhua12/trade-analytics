@@ -1,0 +1,3 @@
+# Separate environment: do not combine with the ETL/dbt requirements.
+apache-airflow==3.4.0
+pytest==9.2.0
