@@ -17,3 +17,9 @@ standalone_admin_password.txt
 # Python cache
 __pycache__/
 *.pyc
+# Local dbt/Airflow environments and recovery evidence
+.venv-dbt/
+.airflow/
+recovery-artifacts/
+.env
+.env.*

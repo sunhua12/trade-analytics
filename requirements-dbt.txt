@@ -1,0 +1,3 @@
+# Keep the currently installed dbt pair; core is a release candidate.
+dbt-core==1.13.0rc1
+dbt-bigquery==1.12.2

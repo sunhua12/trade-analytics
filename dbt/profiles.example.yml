@@ -1,0 +1,11 @@
+trade_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: trade_analytics_dev
+      location: "{{ env_var('BQ_LOCATION', 'asia-northeast1') }}"
+      threads: 4
+      job_execution_timeout_seconds: 3600

@@ -1,2 +1,6 @@
-httpx
-tenacity
+# ETL runtime; versions observed in the local Python 3.14 environment.
+httpx==0.28.1
+tenacity==9.1.4
+pydantic==2.14.3
+google-cloud-bigquery==3.47.0
+google-api-core==2.43.2
