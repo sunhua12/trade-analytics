@@ -1,0 +1,154 @@
+version: 2
+
+unit_tests:
+  - name: unit_import_trends_missing_calendar_month
+    model: mart_import_trends
+    description: >
+      March must not compare against January when
+      February is missing. The model must use
+      calendar-aligned comparisons rather than LAG.
+
+    given:
+      - input: ref('fct_trade_imports')
+        rows:
+          - trade_observation_id: trade-jan
+            period_key: 202401
+            period_start_date: "2024-01-01"
+            period: "202401"
+            reporter_code: 842
+            partner_code: 0
+            commodity_key: commodity-A
+            cmd_code: "854231"
+            query_type: world_total
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            import_value: 100
+
+          - trade_observation_id: trade-mar
+            period_key: 202403
+            period_start_date: "2024-03-01"
+            period: "202403"
+            reporter_code: 842
+            partner_code: 0
+            commodity_key: commodity-A
+            cmd_code: "854231"
+            query_type: world_total
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            import_value: 150
+
+    expect:
+      rows:
+        - trade_observation_id: trade-jan
+          mom_status: NO_PRIOR_MONTH
+          yoy_status: NO_PRIOR_YEAR
+          previous_month_value: null
+          mom_growth_rate: null
+
+        - trade_observation_id: trade-mar
+          mom_status: NO_PRIOR_MONTH
+          yoy_status: NO_PRIOR_YEAR
+          previous_month_value: null
+          mom_growth_rate: null
+
+  - name: unit_import_trends_zero_baseline
+    model: mart_import_trends
+    description: >
+      A zero previous-month value must produce
+      ZERO_BASELINE and NULL growth rate.
+      A decrease from 150 to zero is a valid
+      negative 100 percent growth rate.
+
+    given:
+      - input: ref('fct_trade_imports')
+        rows:
+          - trade_observation_id: trade-mar
+            period_key: 202403
+            period_start_date: "2024-03-01"
+            period: "202403"
+            reporter_code: 842
+            partner_code: 0
+            commodity_key: commodity-A
+            cmd_code: "854231"
+            query_type: world_total
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            import_value: 150
+
+          - trade_observation_id: trade-apr
+            period_key: 202404
+            period_start_date: "2024-04-01"
+            period: "202404"
+            reporter_code: 842
+            partner_code: 0
+            commodity_key: commodity-A
+            cmd_code: "854231"
+            query_type: world_total
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            import_value: 0
+
+          - trade_observation_id: trade-may
+            period_key: 202405
+            period_start_date: "2024-05-01"
+            period: "202405"
+            reporter_code: 842
+            partner_code: 0
+            commodity_key: commodity-A
+            cmd_code: "854231"
+            query_type: world_total
+            flow_code: M
+            classification_code: H6
+            hs_version: null
+            freq_code: M
+            partner2_code: 0
+            customs_code: C00
+            mot_code: 0
+            is_original_classification: true
+            import_value: 100
+
+
+    expect:
+      rows:
+        - trade_observation_id: trade-mar
+          mom_status: NO_PRIOR_MONTH
+          previous_month_value: null
+          mom_absolute_change: null
+          mom_growth_rate: null
+
+        - trade_observation_id: trade-apr
+          mom_status: COMPARABLE
+          previous_month_value: 150
+          mom_absolute_change: -150
+          mom_growth_rate: -1
+
+        - trade_observation_id: trade-may
+          mom_status: ZERO_BASELINE
+          previous_month_value: 0
+          mom_absolute_change: null
+          mom_growth_rate: null
+

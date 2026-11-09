@@ -1,0 +1,169 @@
+
+version: 2
+
+sources:
+  - name: comtrade_raw
+    description: >
+      Raw UN Comtrade monthly import records ingested by
+      the Stage 7 pipeline. Records are validated before
+      insertion and preserve original source JSON.
+
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: trade_raw
+
+    tables:
+      - name: comtrade_records
+        identifier: comtrade_records
+
+        description: >
+          Validated monthly import observations.
+          World totals and partner-level records share
+          this table but have distinct query_type values.
+          Only initial-load behavior is supported by the
+          current MVP. Source assurance is BOUNDED_PREVIEW.
+
+        columns:
+          - name: period_start_date
+            description: >
+              First day of the reporting month.
+              BigQuery monthly partition column.
+            data_type: date
+            data_tests:
+              - not_null
+
+          - name: period
+            description: Reporting period in YYYYMM format.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: reporter_code
+            description: UN Comtrade reporter country code.
+            data_type: int64
+            data_tests:
+              - not_null
+
+          - name: partner_code
+            description: >
+              UN Comtrade trading partner code.
+              Zero represents the world total.
+            data_type: int64
+            data_tests:
+              - not_null
+
+          - name: cmd_code
+            description: HS commodity code from the source query.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: primary_value
+            description: >
+              Primary trade value preserved as BIGNUMERIC.
+              No rounding is applied in staging.
+            data_type: bignumeric
+            data_tests:
+              - not_null
+
+          - name: query_type
+            description: >
+              Source query grain, world_total or partner_detail.
+            data_type: string
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values:
+                      - world_total
+                      - partner_detail
+
+          - name: flow_code
+            description: Trade flow code, M for imports.
+            data_type: string
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ["M"]
+
+          - name: classification_code
+            description: Classification version used by Comtrade.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: hs_version
+            description: Optional derived HS version.
+            data_type: string
+
+          - name: freq_code
+            description: Data frequency, M for monthly.
+            data_type: string
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: ["M"]
+
+          - name: partner2_code
+            description: Secondary trading partner code.
+            data_type: int64
+
+          - name: customs_code
+            description: Customs procedure code.
+            data_type: string
+
+          - name: mot_code
+            description: Mode of transport code.
+            data_type: int64
+
+          - name: is_original_classification
+            description: >
+              True when the classification matches the
+              original source classification.
+            data_type: bool
+
+          - name: net_weight
+            description: Source net weight in BIGNUMERIC precision.
+            data_type: bignumeric
+
+          - name: quantity
+            description: Source reported quantity in BIGNUMERIC precision.
+            data_type: bignumeric
+
+          - name: source_record_json
+            description: Original source record serialized as JSON text.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: source_row_index
+            description: Zero-based row index within the source batch.
+            data_type: int64
+            data_tests:
+              - not_null
+
+          - name: batch_id
+            description: Stage 6 and Stage 7 ingestion batch identifier.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: source_query_key
+            description: Deterministic identifier for a source query.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: revision_id
+            description: >
+              Content-derived revision identifier produced by Stage 7.
+              The MVP does not yet implement revision replacement.
+            data_type: string
+            data_tests:
+              - not_null
+
+          - name: ingested_at
+            description: BigQuery Raw insertion timestamp in UTC.
+            data_type: timestamp
+            data_tests:
+              - not_null

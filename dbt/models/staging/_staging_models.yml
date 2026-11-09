@@ -1,0 +1,181 @@
+
+version: 2
+
+models:
+  - name: stg_comtrade_world_total
+    description: >
+      Staging view for validated UN Comtrade world-total
+      monthly import observations.
+      Each row must have query_type = world_total and
+      partner_code = 0.
+      BIGNUMERIC precision is preserved from Raw.
+
+    columns:
+      - name: period_start_date
+        description: First day of the reporting month.
+        data_tests:
+          - not_null
+
+      - name: period
+        description: Reporting period in YYYYMM format.
+        data_tests:
+          - not_null
+
+      - name: reporter_code
+        description: Importing reporter country.
+        data_tests:
+          - not_null
+
+      - name: partner_code
+        description: World total partner code, always zero.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0]
+                quote: false
+
+      - name: cmd_code
+        description: HS commodity code.
+        data_tests:
+          - not_null
+
+      - name: primary_value
+        description: >
+          Source primary trade value with full BIGNUMERIC
+          precision; no rounding or aggregation.
+        data_tests:
+          - not_null
+
+      - name: query_type
+        description: Must equal world_total.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["world_total"]
+
+      - name: flow_code
+        description: Import flow code.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["M"]
+
+      - name: classification_code
+        description: Classification version from the source.
+        data_tests:
+          - not_null
+
+      - name: source_query_key
+        description: Deterministic source query identifier.
+        data_tests:
+          - not_null
+
+      - name: source_row_index
+        description: Source row index within the batch.
+        data_tests:
+          - not_null
+
+      - name: batch_id
+        description: Ingestion batch identifier.
+        data_tests:
+          - not_null
+
+      - name: revision_id
+        description: Content-derived revision identifier.
+        data_tests:
+          - not_null
+
+      - name: ingested_at
+        description: Raw ingestion timestamp.
+        data_tests:
+          - not_null
+
+  - name: stg_comtrade_partner_detail
+    description: >
+      Staging view for validated UN Comtrade partner-level
+      monthly import observations.
+      Each row must have query_type = partner_detail
+      and partner_code != 0.
+      BIGNUMERIC precision is preserved from Raw.
+
+    columns:
+      - name: period_start_date
+        description: First day of the reporting month.
+        data_tests:
+          - not_null
+
+      - name: period
+        description: Reporting period in YYYYMM format.
+        data_tests:
+          - not_null
+
+      - name: reporter_code
+        description: Importing reporter country.
+        data_tests:
+          - not_null
+
+      - name: partner_code
+        description: Trading partner country code.
+        data_tests:
+          - not_null
+
+      - name: cmd_code
+        description: HS commodity code.
+        data_tests:
+          - not_null
+
+      - name: primary_value
+        description: >
+          Source primary trade value with full BIGNUMERIC
+          precision; no rounding or aggregation.
+        data_tests:
+          - not_null
+
+      - name: query_type
+        description: Must equal partner_detail.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["partner_detail"]
+
+      - name: flow_code
+        description: Import flow code.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["M"]
+
+      - name: classification_code
+        description: Classification version from the source.
+        data_tests:
+          - not_null
+
+      - name: source_query_key
+        description: Deterministic source query identifier.
+        data_tests:
+          - not_null
+
+      - name: source_row_index
+        description: Source row index within the batch.
+        data_tests:
+          - not_null
+
+      - name: batch_id
+        description: Ingestion batch identifier.
+        data_tests:
+          - not_null
+
+      - name: revision_id
+        description: Content-derived revision identifier.
+        data_tests:
+          - not_null
+
+      - name: ingested_at
+        description: Raw ingestion timestamp.
+        data_tests:
+          - not_null

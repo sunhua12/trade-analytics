@@ -1,0 +1,105 @@
+
+version: 2
+
+models:
+  - name: int_comtrade_scope_reconciliation
+    description: >
+      Compares UN Comtrade world totals with the sum of
+      returned partner-detail observations. A numerical
+      match does not prove source completeness.
+
+    columns:
+      - name: period
+        data_tests:
+          - not_null
+
+      - name: reporter_code
+        data_tests:
+          - not_null
+
+      - name: cmd_code
+        data_tests:
+          - not_null
+
+      - name: reconciliation_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - PARTNER_ONLY
+                  - WORLD_ONLY
+                  - INVALID_SOURCE_VALUES
+                  - ZERO_WORLD_VALUE
+                  - ZERO_PARTNER_VALUE
+                  - MATCHED_VALUE
+                  - PARTNER_EXCEEDS_WORLD
+                  - UNRECONCILED
+
+      - name: source_assurance_level
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["BOUNDED_PREVIEW"]
+
+  - name: int_comtrade_partner_share
+    description: >
+      Partner-level imports with two share definitions:
+      share_of_world and share_of_reported_partners.
+      Shares remain NULL for invalid denominators.
+
+    columns:
+      - name: partner_code
+        data_tests:
+          - not_null
+
+      - name: partner_import_value
+        data_tests:
+          - not_null
+
+      - name: source_query_key
+        data_tests:
+          - not_null
+
+  - name: int_comtrade_concentration
+    description: >
+      Provisional HHI for the partner records returned
+      by the bounded UN Comtrade preview source.
+      HHI is not certified as a complete-market metric.
+
+    columns:
+      - name: observed_partner_count
+        data_tests:
+          - not_null
+
+      - name: hhi_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - NOT_CALCULABLE
+                  - PROVISIONAL_BOUNDED_PREVIEW
+
+  - name: int_comtrade_scope_quality
+    description: >
+      Consolidated scope-level reconciliation and
+      concentration quality indicators for downstream
+      dimensional and mart models.
+
+    columns:
+      - name: reconciliation_status
+        data_tests:
+          - not_null
+
+      - name: hhi_status
+        data_tests:
+          - not_null
+
+      - name: has_usable_world_comparison
+        data_tests:
+          - not_null
+
+      - name: has_observed_concentration
+        data_tests:
+          - not_null
